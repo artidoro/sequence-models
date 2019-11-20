@@ -116,7 +116,14 @@ sequence_len_default = 10000000
 words_per_line_default = 64
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    description = ("Generate data with HMM or MC models with dependency on the previous step t-1 "
+                   "and step t-lag. This code writes the data to a file with exponentially increasing lag size. "
+                   "The output files have user specified number of words separated by spaces on each line. "
+                   "Note that with MC models the parameter size increases exponentially with the vocab "
+                   "size. With very large vocab size it is therefore better to use HMM generation which "
+                   "increases exponentially with the hidden state size.")
+
+    parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--lag_min', default=lag_min_default, type=int,
         help='the min lag size. should be a power of 2. (default {})'.format(lag_min_default))
     parser.add_argument('--lag_max', default=lag_max_default, type=int,
