@@ -8,7 +8,8 @@ def torchtext_batch_iterators(root_path, train_path, validation_path, test_path,
     """
     Returns iterators for training, test and validation data from a single data file.
     Assumes that the data is already numerical and separated by spaces.
-    Each batch in the iterators returned has a `batch.text` and `batch.target` field for language modeling.
+    Each batch in the iterators returned has a `batch.text` and `batch.target` field for
+    language modeling.
 
     The best way to understand more about torchtext is to look directly in the source code.
 
@@ -36,9 +37,10 @@ def torchtext_batch_iterators(root_path, train_path, validation_path, test_path,
 
     text_field = data.Field(sequential=True, batch_first=batch_first, tokenize=tokenize, use_vocab=False)
 
-    train, validation, test  = datasets.LanguageModelingDataset.splits(path=root_path, train=train_path, validation=validation_path, test=test_path,
-        text_field=text_field, newline_eos=False)
+    train, validation, test  = datasets.LanguageModelingDataset.splits(path=root_path, train=train_path,
+        validation=validation_path, test=test_path, text_field=text_field, newline_eos=False)
 
-    train_iter, val_iter, test_iter = data.BPTTIterator.splits((train, validation, test), batch_size=batch_size, device=device, bptt_len=bptt_len, repeat=repeat)
+    train_iter, val_iter, test_iter = data.BPTTIterator.splits((train, validation, test),
+        batch_size=batch_size, device=device, bptt_len=bptt_len, repeat=repeat)
 
     return train_iter, val_iter, test_iter
