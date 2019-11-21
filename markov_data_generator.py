@@ -1,6 +1,8 @@
 import numpy as np
 import argparse
+import os
 from tqdm import tqdm
+
 
 ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
 # helper functions
@@ -114,6 +116,7 @@ mc_default = False
 hidden_size_default = 100
 sequence_len_default = 10000000
 words_per_line_default = 64
+dest_folder_default = 'generated_data'
 
 if __name__ == '__main__':
     description = ("Generate data with HMM or MC models with dependency on the previous step t-1 "
@@ -125,9 +128,9 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--lag_min', default=lag_min_default, type=int,
-        help='the min lag size. should be a power of 2. (default {})'.format(lag_min_default))
+        help='the min lag size. log scale. (default {})'.format(lag_min_default))
     parser.add_argument('--lag_max', default=lag_max_default, type=int,
-        help='the max lag size. should be a power of 2. (default {})'.format(lag_max_default))
+        help='the max lag size. log scale. (default {})'.format(lag_max_default))
     parser.add_argument('--vocab_size', default=vocab_default, type=int,
         help='the vocabulary size. (default {})'.format(vocab_default))
     parser.add_argument('--mc', default=mc_default, type=bool,
@@ -138,6 +141,8 @@ if __name__ == '__main__':
         help='the number of words in each file. (default {})'.format(sequence_len_default))
     parser.add_argument('--words_line', default=words_per_line_default, type=int,
         help='the number of words per line. (default {})'.format(words_per_line_default))
+    parser.add_argument('--dest_folder', default=dest_folder_default,
+        help='the destination folder. (default {})'.format(dest_folder_default))
     args = parser.parse_args()
 
     seed = 0
@@ -150,8 +155,11 @@ if __name__ == '__main__':
     # We need to generate a series of files that have increasing lag (between min and max).
     # Each should have length file len.
     for idx, lag in enumerate([2**exp for exp in range(args.lag_min, args.lag_max + 1)]):
-        with open('V{}{}_lag_{}_vocab_{}_seqlen_{}_wordsline_{}.txt'.format(GEN_VERSION,
-            file_base, lag, args.vocab_size, args.sequence_len, args.words_line), 'w') as out_file:
+
+        file_name = '{}/V{}{}_lag_{}_vocab_{}_seqlen_{}_wordsline_{}.txt'.format(dest_folder_default, GEN_VERSION,
+            file_base, lag, args.vocab_size, args.sequence_len, args.words_line)
+        os.makedirs(os.path.dirname(file_name), exist_ok=True)
+        with open(file_name, 'w') as out_file:
 
             # Code specific for Markov Chain generation.
             if args.mc:
@@ -185,4 +193,4 @@ if __name__ == '__main__':
                     out_file.write(line)
                     prev_hidden_state_seq = next_hid_sequence
 
-        print('Done generating file {}/{}.'.format(idx, args.lag_max + 1 - args.lag_min))
+        print('Done generating file {}/{}.'.format(idx + 1, args.lag_max + 1 - args.lag_min))
