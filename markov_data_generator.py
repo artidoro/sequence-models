@@ -156,7 +156,7 @@ if __name__ == '__main__':
     # Each should have length file len.
     for idx, lag in enumerate([2**exp for exp in range(args.lag_min, args.lag_max + 1)]):
 
-        file_name = '{}/V{}{}_lag_{}_vocab_{}_seqlen_{}_wordsline_{}.txt'.format(dest_folder_default, GEN_VERSION,
+        file_name = '{}/V{}{}_lag_{}_vocab_{}_seqlen_{}_wordsline_{}.txt'.format(args.dest_folder, GEN_VERSION,
             file_base, lag, args.vocab_size, args.sequence_len, args.words_line)
         os.makedirs(os.path.dirname(file_name), exist_ok=True)
         with open(file_name, 'w') as out_file:
