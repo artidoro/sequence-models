@@ -1,4 +1,3 @@
-#%%
 import random
 from torchtext import data
 from torchtext import datasets
