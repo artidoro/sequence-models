@@ -17,7 +17,7 @@ T = np.random.randint(lag_size + 1, 10 * lag_size)
 hid = 3
 # initialize the probability tables
 start_prob = initialize_start_prob(num_states=hid)
-prev_hidden_state_seq = np.array([get_state(start_prob) for _ in range(lag)], dtype=int)
+prev_hidden_state_seq = np.array([get_state(start_prob) for _ in range(lag_size)], dtype=int)
 trans = init_trans_matrix(dep, hid, hid)
 emission = rand_init_prob_matrix(hid, obs)
 
@@ -30,7 +30,7 @@ print(hmm_seq_data)
 # MC specific
 # In markov chain the transition goes directly from obs to obs.
 start_prob = initialize_start_prob(num_states=obs)
-prev_state_seq = np.array([get_state(start_prob) for _ in range(lag)], dtype=int)
+prev_state_seq = np.array([get_state(start_prob) for _ in range(lag_size)], dtype=int)
 trans = init_trans_matrix(dep, obs, obs)
 
 mc_seq_data = mc_generator_short_long(lag_size=lag_size, output_length=T,
