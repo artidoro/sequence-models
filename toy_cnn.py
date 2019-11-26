@@ -139,7 +139,23 @@ for epoch in range(num_epochs):
         optimizer.step()
 
         # print statistics
-        running_loss += loss.item()
-        print('[%d, %5d] loss: %.3f' %
-                (epoch + 1, i + 1, running_loss))
-        running_loss = 0.0
+        if i % num_batch_to_print == 0:
+            running_loss += loss.item()
+            print('[%d, %5d] loss: %.5f' %
+                    (epoch + 1, i + 1, running_loss / num_batch_to_print))
+            running_loss = 0.0
+
+# load all testing data files
+acc_input, acc_target = load_data(folder = "testing_seq",
+                                  fileprefix = "hmm_3_hid_5_obs_100_lag_500_len_9*")
+
+testing_input = functools.reduce(lambda x, y: np.concatenate((x, y), axis=0), acc_input)
+print("finish")
+testing_target = functools.reduce(lambda x, y: np.concatenate((x, y), axis=0), acc_target)
+print("finish")
+
+outputs = net(torch.from_numpy(testing_input).float())
+print("finish")
+_, predicted = torch.max(outputs, 1)
+
+print("prediction accuracy = {:.3f}".format(sum(predicted == torch.from_numpy(testing_target)).item() / len(predicted)))
