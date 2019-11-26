@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
+import glob
+import functools
 
 input_len = 100
 num_filter_1 = 6
@@ -11,6 +13,11 @@ num_obs = 5
 kernel_width = 5 * num_obs
 stride = 1
 padding = 0
+
+# haven't researched whether there's a good structure for sequence data cnn
+# don't know whether to add pooling layer or not and what is a good design
+# haven't tested with the optimizer settings yet
+# may need embedding for when num_obs (or volcabulary) size is large
 
 class Net(nn.Module):
 
