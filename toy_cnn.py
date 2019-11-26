@@ -66,17 +66,9 @@ params = list(net.parameters())
 print(len(params))
 print(params[0].size())
 
-# load one data file
-one_seq = np.loadtxt("training_seq/hmm_3_hid_5_obs_100_lag_500_len_4.txt", dtype=int)
-
-reformed_input = np.empty((len(one_seq) - input_len, 1, input_len), dtype=np.long)
-reformed_target = np.empty((len(one_seq) - input_len,), dtype=np.long)
-
-# slide a window to use the last input_len sequence to predict the next one
-for i in range(reformed_seq.shape[0]):
-    reformed_input[i, :, :] = one_seq[i: i + input_len]
-    reformed_target[i] = one_seq[i + input_len]
-print("finish")
+# ---------------------------------------------------------------------------- #
+# helper functions
+# ---------------------------------------------------------------------------- #
 
 # one hot encoding of the input sequence
 def one_hot(nclass, seq):
@@ -85,27 +77,57 @@ def one_hot(nclass, seq):
     result = np.array(nested).reshape(nclass*len(seq),)
     return(result)
 
-one_hot_input = np.empty((len(one_seq) - input_len, 1, input_len * num_obs), dtype=np.double)
-# one_hot encoded input
-for i in range(reformed_seq.shape[0]):
-    one_hot_input[i, :, :] = one_hot(num_obs, reformed_input[i, :, :].transpose()).transpose()
+# folder: folder containing data files to load
+# prefix: file prefix to identify files to load
+def load_data(folder, fileprefix):
+    files = glob.glob("{}/{}/{}".format(os.getcwd(), folder, fileprefix))
+    acc_input = []
+    acc_target = []
+    for j,f in enumerate(files):
+        print(j)
+        # load one data file
+        one_seq = np.loadtxt(f, dtype=int)
 
+        reformed_input = np.empty((len(one_seq) - input_len, 1, input_len), dtype=int)
+        reformed_target = np.empty((len(one_seq) - input_len,), dtype=int)
+
+        # slide a window to use the last input_len sequence to predict the next one
+        for i in range(reformed_seq.shape[0]):
+            reformed_input[i, :, :] = one_seq[i: i + input_len]
+            reformed_target[i] = one_seq[i + input_len]
+
+        one_hot_input = np.empty((len(one_seq) - input_len, 1, input_len * num_obs), dtype=np.double)
+        # one_hot encoded input
+        for i in range(reformed_seq.shape[0]):
+            one_hot_input[i, :, :] = one_hot(num_obs, reformed_input[i, :, :].transpose()).transpose()
+
+        acc_input.append(one_hot_input)
+        acc_target.append(reformed_target)
+    return (acc_input, acc_target)
+
+# load all training data files
+acc_input, acc_target = load_data(folder = "training_seq",
+                                  fileprefix = "hmm_3_hid_5_obs_100_lag_500_len_*")
+
+training_input = functools.reduce(lambda x, y: np.concatenate((x, y), axis=0), acc_input)
+print("finish")
+
+training_target = functools.reduce(lambda x, y: np.concatenate((x, y), axis=0), acc_target)
+print("finish")
+
+# training
 criterion = nn.CrossEntropyLoss()
-num_data_points = 4
+optimizer = optim.SGD(net.parameters(), lr=0.001)
 batch_size = 32
-num_batches = -(-(len(reformed_target) // batch_size))
-for epoch in range(1):
+num_batches = -(-(len(training_target) // batch_size))
+num_batch_to_print = 100
+num_epochs = 1
+for epoch in range(num_epochs):
     running_loss = 0.0
-    # for i in range (1):
     for i in range (num_batches):
-        # print("----------batch {}--------------".format(i))
-        # dummy training input
-        # inputs = torch.randn(batch_size, 1, 100)
-
-        idx = np.random.randint(0, len(reformed_target), (batch_size,))
-        inputs = torch.from_numpy(one_hot_input[idx])
-        # dummy labels
-        labels = torch.from_numpy(reformed_target[idx])
+        idx = np.random.randint(0, len(training_target), (batch_size,))
+        inputs = torch.from_numpy(training_input[idx])
+        labels = torch.from_numpy(training_target[idx])
 
         # zero the parameter gradients
         optimizer.zero_grad()
