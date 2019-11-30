@@ -107,6 +107,7 @@ class TransformerXL(SequenceModel):
         n_layer = int((self.depth - 1) / 2) # depth = n_layer * (multi-head + ffn) + linear-softmax
         d_model = self.width
         d_inner = self.width * 2
+        vocab_size = self.vocab
 
         if self.d_embed < 0:
             self.d_embed = d_model
@@ -135,7 +136,7 @@ class TransformerXL(SequenceModel):
             model.apply(self.update_dropout)
             model.apply(self.update_dropatt)
         else:
-            model = MemTransformerLM(self.vocab_size, n_layer, self.n_head, d_model,
+            model = MemTransformerLM(vocab_size, n_layer, self.n_head, d_model,
                 self.d_head, d_inner, self.dropout, self.dropatt,
                 tie_weight=self.tied, d_embed=self.d_embed, div_val=self.div_val, 
                 tie_projs=[False], pre_lnorm=self.pre_lnorm, tgt_len=self.tgt_len,
