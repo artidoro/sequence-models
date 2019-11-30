@@ -54,6 +54,7 @@ class SequenceModel(ABC):
             
         self.model = self.init_model(**hparams)
 
+
     @abstractmethod
     def init_model(self, **hparams):
         """
@@ -69,6 +70,7 @@ class SequenceModel(ABC):
         Gets the loss and perplexity for a given X,Y.
         """
         raise NotImplementedError()
+
 
     def get_model(self):
         return self.model

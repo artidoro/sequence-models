@@ -76,14 +76,14 @@ class TransformerXL(SequenceModel):
 
 
     def init_model(self, depth, width):
-        n_layer = depth
-        d_model = width
-        d_inner = width * 2
+        n_layer = self.depth
+        d_model = self.width
+        d_inner = self.width * 2
 
-        if d_embed < 0:
-            d_embed = d_model
+        if self.d_embed < 0:
+            self.d_embed = d_model
 
-        if restart:
+        if self.restart:
             with open(os.path.join(restart_dir, 'model.pt'), 'rb') as f:
                 model = torch.load(f)
             if not fp16:
@@ -91,13 +91,13 @@ class TransformerXL(SequenceModel):
             model.apply(self.update_dropout)
             model.apply(self.update_dropatt)
         else:
-            model = MemTransformerLM(vocab_size, n_layer, n_head, d_model,
-                d_head, d_inner, dropout, dropatt,
-                tie_weight=tied, d_embed=d_embed, div_val=div_val, 
-                tie_projs=[False], pre_lnorm=pre_lnorm, tgt_len=tgt_len,
-                ext_len=ext_len, mem_len=mem_len, cutoffs=[],
-                same_length=same_length, attn_type=attn_type,
-                clamp_len=clamp_len, sample_softmax=-1)
+            model = MemTransformerLM(self.vocab_size, n_layer, self.n_head, d_model,
+                self.d_head, d_inner, self.dropout, self.dropatt,
+                tie_weight=self.tied, d_embed=self.d_embed, div_val=self.div_val, 
+                tie_projs=[False], pre_lnorm=self.pre_lnorm, tgt_len=self.tgt_len,
+                ext_len=self.ext_len, mem_len=self.mem_len, cutoffs=[],
+                same_length=self.same_length, attn_type=self.attn_type,
+                clamp_len=self.clamp_len, sample_softmax=-1)
             model.apply(self.weights_init)
             model.word_emb.apply(self.weights_init) # ensure embedding init is not overridden by out_layer in case of weight sharing
 
@@ -131,11 +131,10 @@ class TransformerXL(SequenceModel):
         }
 
 
-    def train_step():
-        raise NotImplementedError()
-
-
-    def get_performance():
+    def get_performance(self, X, Y):
+        """
+        Gets the loss and perplexity for a given X,Y.
+        """
         raise NotImplementedError()
 
 
