@@ -16,20 +16,13 @@ from models.transformerXL import TransformerXL
 from os.path import exists as E
 from os.path import join as J
 
+import config as c
+
 logger = logging.getLogger(__name__)
 
 
 def set_spec_default_values(spec):
-    DEFAULT_VALUES = {
-        'device': 'cuda',
-        'lr': 0.0002,
-        'max_step': 100000,
-        'momentum': 0.0,
-        'scheduler': 'constant',
-        'warmup_step': 0,
-    }
-
-    for key, value in DEFAULT_VALUES.items():
+    for key, value in c.DEFAULT_VALUES_SPEC.items():
         if key not in spec:
             spec[key] = value
     return spec
@@ -73,7 +66,7 @@ def run_experiment(spec, experiment_directory):
 
     # TODO: initialize dataset iterators (i.e. `train_iter`)
     # TODO: genericize the initialization of `model`
-    sequence_model = TransformerXL(8, 64, spec)
+    sequence_model = TransformerXL(**spec)
     model = sequence_model.get_model()
     print(type(model))
 

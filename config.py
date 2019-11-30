@@ -16,4 +16,16 @@ HYPERPARAMETERS = OrderedDict({
 })
 
 
-DEFAULT_LEARNING_RATE = 0.0002
+DEFAULT_VALUES_SPEC = {
+    'device': 'cuda',
+    'lr': 0.0002,
+    'max_step': 100000,
+    'momentum': 0.0,
+    'scheduler': 'constant',
+    'warmup_step': 0,
+}
+
+REQUIRED_ATTRIBUTES = set(
+    list(DEFAULT_VALUES_SPEC.keys()) +
+    list(HYPERPARAMETERS.keys.keys())
+)
