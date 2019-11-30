@@ -14,6 +14,30 @@ class LSTMModel(SequenceModel):
             self.output)
 
     
+    @abstractmethod
+    def predict(self, batch, padding=True):
+        """
+        Gets all one-step predictions for a batch of sentences.
+        For each context window output the next word.
+        seq[0:k] -> pred[k+1]
+        and so we output seq_len - k predictions
+        without padding
+        and seq_len predictions
+        with padding
+        """
+        # Todo: Finish LSTM predict @Arti
+        raise NotImplementedError()
+
+    
+    @abstractmethod
+    def train_step(self, batch):
+        """Performs an unsupervised train step for a given batch.
+        Returns loss on batch.
+        """
+        # TODO: Finish LSTM train_step @Arti
+        # Make use of self.optimizer
+        
+        raise NotImplementedError()
 
 
 
@@ -40,7 +64,8 @@ class LSTMModel(nn.Module):
         # Readout layer
         self.fc = nn.Linear(hidden_dim, vocab_size)
 
-    def forward(self, x):
+    def forward(self, x, hidden):
         # TODO: Finish LSTM Forward function (@Arti)
         x = self.embedding(x)
+        
 

@@ -66,7 +66,7 @@ def run_experiment(spec, experiment_directory):
     # For now let's just print out the specification
 
     # TODO: initialize dataset iterators (i.e. `train_iter`)
-    # TODO: genericize the initialization of `model`
+
     if model == 'transformer':
         sequence_model = TransformerXL(**spec)
     elif model == 'lstm':
@@ -90,7 +90,7 @@ def run_experiment(spec, experiment_directory):
     #         model.train()
     #         mems = tuple()
     #         for batch, (data, target, seq_len) in enumerate(train_iter):
-    #             model.zero_grad()
+    # #             model.zero_grad()
 
     #             ret = model.to(spec['device'])(data, target, *mems)
     #             loss, mems = ret[0], ret[1:]
@@ -138,13 +138,6 @@ def run_experiment(spec, experiment_directory):
     #     print('-' * 100)
     #     print('Exiting from training early')
 
-
-    # DO SOMETHING WITH THIS SPEC DUDE!
-    print(spec)
-    time.sleep(10)
-    # THE GPU
-    print(os.environ.get(c.CVISIBLE, None))
-    
     
 
 
