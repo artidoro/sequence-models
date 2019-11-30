@@ -5,6 +5,12 @@ import torch.optim as optim
 import numpy as np
 import glob
 import functools
+import time
+import sys
+
+sys.path.append(os.path.dirname(os.getcwd()) + '/utils')
+
+import data_utils
 
 # haven't researched whether there's a good structure for sequence data cnn
 # don't know whether to add pooling layer or not and what is a good design
@@ -24,13 +30,15 @@ def one_hot(nclass, seq):
 # compute output dimension of convolution and pooling
 def get_output_dim(input_len, k, p, s):
     output = (input_len + p - k) / s + 1
-    assert (round(output, 0) == output)
+    # print(output)
+    # assert (round(output, 0) == output)
     return int(output)
 
 # Loads training/testing data from some folder
 # folder: folder containing data files to load
 # prefix: file prefix to identify files to load
-def load_data(folder, fileprefix):
+# the number of input layer neurons
+def load_data(folder, fileprefix, input_len):
     files = glob.glob("{}/{}/{}".format(os.getcwd(), folder, fileprefix))
     acc_input = []
     acc_target = []
@@ -43,12 +51,17 @@ def load_data(folder, fileprefix):
         reformed_target = np.empty((len(one_seq) - input_len,), dtype=int)
 
         # slide a window to use the [t-input_len:t-1] sequence to predict the t-th
-        for i in range(reformed_seq.shape[0]):
+        for i in range(reformed_input.shape[0]):
             reformed_input[i, :, :] = one_seq[i: i + input_len]
             reformed_target[i] = one_seq[i + input_len]
         acc_input.append(reformed_input)
         acc_target.append(reformed_target)
     return (acc_input, acc_target)
+
+
+out1 = get_output_dim(100 * 300, 5 * 300, 0, 1)
+
+get_output_dim(out1, 2, 0, 2)
 
 # ---------------------------------------------------------------------------- #
 # Network structure
@@ -60,7 +73,7 @@ class Net(nn.Module):
                  pool_kernel_width, embedding_dim, stride, padding):
         super(Net, self).__init__()
         self.embeddings = nn.Embedding(vocab_size, embedding_dim)
-        self.conv1 = nn.Conv1d(1, num_filter_1, conv_kernel_width * embedding_dim,
+        self.conv1 = nn.Conv1d(1, num_conv_filter, conv_kernel_width * embedding_dim,
                                stride=stride, padding=padding)
         self.pool = torch.nn.MaxPool1d(kernel_size=pool_kernel_width,
                                        stride=pool_kernel_width, padding=0)
@@ -70,7 +83,7 @@ class Net(nn.Module):
         out_pool_size = get_output_dim(out_conv_size,
                                        pool_kernel_width,
                                        0, pool_kernel_width)
-        self.fc1 = nn.Linear(num_filter_1 * out_pool_size, vocab_size)
+        self.fc1 = nn.Linear(num_conv_filter * out_pool_size, vocab_size)
 
     def forward(self, x):
         # print("initial shape")
@@ -86,7 +99,6 @@ class Net(nn.Module):
         x = F.relu(x)
         # print("shape after relu")
         # print(x.shape)
-        x = F.relu(x)
         x = x.view(-1, self.num_flat_features(x))
         x = self.fc1(x)
         # print("shape after fc1")
@@ -103,31 +115,46 @@ class Net(nn.Module):
 # load training data files into a matrix of num_training_instance x 1 x input_len
 # num_training_instance = num_sequences x (len(one_seq) - input_len)
 acc_input, acc_target = load_data(folder = "training_seq",
-                                  fileprefix = "hmm_3_hid_5_obs_100_lag_500_len_*")
+                                  fileprefix = "hmm_3_hid_5_obs_100_lag_500_len_*",
+                                  input_len=100)
 
-training_input = functools.reduce(lambda x, y: np.concatenate((x, y), axis=0), acc_input)
+data_input = functools.reduce(lambda x, y: np.concatenate((x, y), axis=0), acc_input)
 print("finish")
-training_target = functools.reduce(lambda x, y: np.concatenate((x, y), axis=0), acc_target)
+data_target = functools.reduce(lambda x, y: np.concatenate((x, y), axis=0), acc_target)
 print("finish")
+
+train_size = int(0.5 * data_input.shape[0])
+train_idx = np.random.choice(range(data_input.shape[0]), (train_size,), replace=False)
+test_idx = np.setdiff1d(np.array(range(data_input.shape[0])), train_idx)
+
+training_input = data_input[train_idx]
+training_target = data_target[train_idx]
+testing_input = data_input[test_idx]
+testing_target = data_target[test_idx]
 
 # compute embedding of the training input
-vocab = np.unique(training_input)
+# vocab = np.unique(training_input)
+# assume we know the vocabulary size
+vocab = range(5)
 word_to_ix = {word: i for i, word in enumerate(vocab)}
 embedding_dim = 3
 
-# asdfasdf
+# vocab = range(5000)
+# word_to_ix = {word: i for i, word in enumerate(vocab)}
+# embedding_dim = 300
 # initialize network
 net = Net(vocab_size=len(vocab), input_len=100, conv_kernel_width=5,
-          num_conv_filter=6, pool_kernel_width=2, embedding_dim=3, stride=1,
+          num_conv_filter=6, pool_kernel_width=2, embedding_dim=embedding_dim, stride=1,
           padding=0)
 print(net)
 
+start_time = time.time()
 # training
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001)
 batch_size = 32
 num_batches = -(-(len(training_target) // batch_size))
-num_batch_to_print = 1000
+num_batch_to_print = 100
 num_epochs = 5
 for epoch in range(num_epochs):
     running_loss = 0.0
@@ -143,24 +170,16 @@ for epoch in range(num_epochs):
         # forward + backward + optimize
         outputs = net(inputs)
         loss = criterion(outputs, labels)
+        running_loss += loss.item()
         loss.backward()
         optimizer.step()
 
         # print statistics
-        if i % num_batch_to_print == 0:
-            running_loss += loss.item()
+        if (i % num_batch_to_print == 0 and i != 0):
             print('[%d, %5d] loss: %.5f' %
                     (epoch + 1, i + 1, running_loss / num_batch_to_print))
             running_loss = 0.0
-
-# load all testing data files
-acc_input, acc_target = load_data(folder = "testing_seq",
-                                  fileprefix = "hmm_3_hid_5_obs_100_lag_500_len_9*")
-
-testing_input = functools.reduce(lambda x, y: np.concatenate((x, y), axis=0), acc_input)
-print("finish")
-testing_target = functools.reduce(lambda x, y: np.concatenate((x, y), axis=0), acc_target)
-print("finish")
+print("finish training in {}".format(time.time() - start_time))
 
 outputs = net(torch.from_numpy(testing_input))
 print("finish")
