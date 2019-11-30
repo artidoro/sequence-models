@@ -117,6 +117,8 @@ hidden_size_default = 100
 sequence_len_default = 10000000
 words_per_line_default = 64
 dest_folder_default = 'generated_data'
+model_seed = 0
+data_seed = 0
 
 if __name__ == '__main__':
     description = ("Generate data with HMM or MC models with dependency on the previous step t-1 "
@@ -143,10 +145,13 @@ if __name__ == '__main__':
         help='the number of words per line. (default {})'.format(words_per_line_default))
     parser.add_argument('--dest_folder', default=dest_folder_default,
         help='the destination folder. (default {})'.format(dest_folder_default))
+    parser.add_argument('--model_seed', default=model_seed,
+        help='the seed used to initialize the model parameters. (default {})'.format(model_seed))
+    parser.add_argument('--data_seed', default=data_seed,
+        help='the seed used to initialize the data. (default {})'.format(data_seed))
     args = parser.parse_args()
 
-    seed = 0
-    np.random.seed(seed)
+    np.random.seed(args[model_seed])
 
     file_base = 'mc'
     if args.mc is False:
@@ -185,6 +190,9 @@ if __name__ == '__main__':
                 # Initialize the transition matrix.
                 transition_matrix = init_trans_matrix(dep, args.hidden_size, args.hidden_size)
                 emission_matrix = rand_init_prob_matrix(args.hidden_size, args.vocab_size)
+
+                start_prob = initialize_start_prob(num_states=args.hidden_size)
+                prev_hidden_state_seq = np.array([get_state(start_prob) for _ in range(lag)], dtype=int)
 
                 for i in tqdm(range(int(np.ceil(args.sequence_len/args.words_line)))):
                     (next_hid_sequence, next_obs_sequence) = hmm_generator_short_long(lag, args.words_line,

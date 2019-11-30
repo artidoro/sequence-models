@@ -18,7 +18,7 @@ from models.gated_cnn import GatedCNN
 from models.lstm import LSTMModel
 from models.sequence_model import SequenceModel
 from models.transformerXL import TransformerXL
-from data_generation.data_utils import torchtext_batch_iterators
+from data_generation.data_utils import torchtext_batch_iterators_split
 
 from os.path import exists as E
 from os.path import join as J
@@ -67,7 +67,7 @@ def run_experiment(spec, experiment_directory):
 
         algorithm = spec["algorithm"]
         batch_size = spec['batch_size']
-        bttp_len = spec['bttp_len']
+        bptt_len = spec['bptt_len']
         device = spec['device']
         hmm_hidden = spec['hmm_hidden']
         max_step = spec['max_step']
@@ -105,12 +105,9 @@ def run_experiment(spec, experiment_directory):
         c.DATA_GENERATION_VERSION, hmm_hidden, sequence_dependence, vocab)
 
     # Create dataset iterators
-    train_path = os.path.join('train', DATA_FILE)
-    val_path = os.path.join('validation', DATA_FILE)
-    test_path = os.path.join('test', DATA_FILE)
-    train_iter, val_iter, test_iter = torchtext_batch_iterators(
-        'generated_data', train_path, val_path, test_path,
-        batch_size=batch_size, bptt_len=bttp_len, device=device, batch_first=False, repeat=True)
+    train_iter, test_iter = torchtext_batch_iterators_split(
+        ROOT_PATH, DATA_FILE, test_size=spec["test_size"],
+        batch_size=batch_size, bptt_len=bptt_len, device=device, batch_first=False, repeat=False)
 
     # Model
     model = sequence_model.get_model()
