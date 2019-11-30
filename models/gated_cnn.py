@@ -123,17 +123,17 @@ class GatedCNN(SequenceModel):
         """
         X = to_var(torch.LongTensor(inputs)) # (bs, seq_len)
         Y = to_var(torch.LongTensor(targets)) # (bs,)
-            # print(X.size(), Y.size())
-            # print(X)
-            pred = model(X) # (bs, ans_size)
-            # _, pred_ids = torch.max(pred, 1)
-            loss = loss_fn(pred, Y)
-            if batch_ct % 100 == 0:
-                print('loss: {:.4f}'.format(loss.data[0]))
+        # print(X.size(), Y.size())
+        # print(X)
+        pred = model(X) # (bs, ans_size)
+        # _, pred_ids = torch.max(pred, 1)
+        loss = loss_fn(pred, Y)
+        if batch_ct % 100 == 0:
+            print('loss: {:.4f}'.format(loss.data[0]))
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
 
 

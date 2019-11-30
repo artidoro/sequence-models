@@ -6,6 +6,7 @@ import argparse
 import json
 import config as c
 import time
+import itertools
 
 import torch
 import torch.optim as optim
@@ -112,10 +113,10 @@ def run_experiment(spec, experiment_directory):
         for epoch in itertools.count(start=1):
             model.train()
             mems = tuple()
-            for batch in enumerate(train_iter):
+            for train_step, batch in enumerate(train_iter):
                 #1. Get batch of paragraphs/documents  (batch, seq_len)
-                sequence_model.train_step(batch.text, batch.target, train_step=train_step, mems=mems)
-
+                sequence_model.train_step(batch.text, batch.target)
+                # TODO: unify the problem of train_step and mems as argument in Transformer XL and the other models.
 
                 #2. Train
                 loss = sequence_model.train_step(batch.text, batch.target)
@@ -130,7 +131,7 @@ def run_experiment(spec, experiment_directory):
 
                 print(loss)
 
-                if train_step >= max_step: 
+                if train_step >= max_step:
                     break
 
             if train_step >= max_step:
