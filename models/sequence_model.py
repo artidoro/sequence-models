@@ -60,6 +60,30 @@ class SequenceModel(ABC):
             # TODO: implement the constant scheduler
             return None
 
+
+    @abstractmethod
+    def predict(self, batch, padding=True):
+        """
+        Gets all one-step predictions for a batch of sentences.
+        For each context window output the next word.
+        seq[0:k] -> pred[k+1]
+        and so we output seq_len - k predictions
+        without padding
+        and seq_len predictions
+        with padding
+        """
+        raise NotImplementedError()
+
+    
+    @abstractmethod
+    def train_step(self, batch):
+        """Performs an unsupervised train step for a given batch.
+        Returns loss on batch.
+        """
+        raise NotImplementedError()
+    
+
+
     def get_model(self):
         return self.model
 
