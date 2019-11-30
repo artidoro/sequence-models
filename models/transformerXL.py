@@ -115,7 +115,7 @@ class TransformerXL(SequenceModel):
         if self.fp16 and self.device != 'cuda':
             print('WARNING: fp16 requires cuda, ignoring fp16 option')
             self.fp16 = False
-        else:
+        elif self.fp16:
             try:
                 from apex.fp16_utils import FP16_Optimizer
                 self.optimizer = FP16_Optimizer(self.optimizer,
@@ -226,19 +226,9 @@ class TransformerXL(SequenceModel):
 
         self.optimizer.step()
 
-        # Step-wise learning rate annealing
-        if self.scheduler_type in ['cosine', 'constant', 'dev_perf']:
-            # linear warmup stage
-            if train_step < self.warmup_step:
-                curr_lr = self.lr * train_step / self.warmup_step
-                self.optimizer.param_groups[0]['lr'] = curr_lr
-            else:
-                if self.scheduler_type == 'cosine':
-                    self.scheduler.step(train_step)
-        elif self.scheduler_type == 'inv_sqrt':
-            self.scheduler.step(train_step)
+        # Update scheduler
+        self.update_scheduler(train_step)
 
-
-
+        return loss
 
 
