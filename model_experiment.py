@@ -20,7 +20,7 @@ class SequenceModelExperiment:
         'lr_min': 0,
     }
 
-    def __init__(self, **hyperparams):
+    def __init__(self, hyperparams):
         # Set default hyperparameter values
         for k, v in self.DEFAULT_PARAMS.items():
             setattr(self, k, v)
@@ -76,7 +76,7 @@ class SequenceModelExperiment:
         elif self.scheduler_type == 'constant':
             pass
 
-    def init_model():
+    def init_model(depth, width):
         ### Each subclass should implement this
         pass
 
@@ -245,13 +245,20 @@ class SequenceModelExperiment:
 
 class TransformerXL(SequenceModelExperiment):
 
-
     self.max_step = 100000
     self.clip = 0.25
 
+    self.n_layer = 12
+    self.n_head = 10
+    self.d_head = 50
+    self.d_embed = -1
+    self.d_model = 500
+    self.d_inner = 1000
+    self.
 
-    def __init__(self):
-        pass
+
+    def __init__(self, hyperparams):
+        super().__init__(hyperparams)
 
 
     def init_weight(weight):
