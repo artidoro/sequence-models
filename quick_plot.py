@@ -20,8 +20,8 @@ def main():
 
     for ex in tqdm.tqdm(experiments):
         losses = np.load(J(ex, "losses.npy"))
-        test_perplexity = np.load(J(ex, "test_perplexity.npy"))
-        train_perplexity = np.load(J(ex, "train_perplexity.npy"))
+        test_perplexity, test_acc = zip(*np.load(J(ex, "test_performance.npy")))
+        train_perplexity, train_acc = zip(*np.load(J(ex, "train_performance.npy")))
 
         plt.plot(losses)
         plt.title("Loss")
@@ -32,6 +32,13 @@ def main():
         plt.legend()
         plt.title("Perplexity")
         plt.savefig(J(ex, 'perplexity.png'))
+        
+        plt.figure()
+        plt.plot(train_acc, label="Train")
+        plt.plot(test_acc, label="Test")
+        plt.legend()
+        plt.title("Accuracy")
+        plt.savefig(J(ex, 'accuracy.png'))
         
 
                 # np.save(J(experiment_directory, 'losses.npy'), losses)

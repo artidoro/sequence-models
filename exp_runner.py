@@ -173,20 +173,18 @@ def run_experiment(spec, experiment_directory):
 
 
 
-                if num_steps % 1000 == 0:
+                if num_steps % 500 == 0:
                     progress.write("Saving loss performance!")
                     np.save(J(experiment_directory, 'losses.npy'), losses)
                     np.save(J(experiment_directory, 'test_performance.npy'), test_performance)
                     np.save(J(experiment_directory, 'train_performance.npy'), train_performance)
                     np.save(J(experiment_directory, 'step_to_performance.npy'), step_to_performance)
                 
-                if num_steps % 1000 == 0:
+                if num_steps % 250 == 0:
                     # Calculate perplexity
                     progress.write("-"* 100)
                     progress.write("Model Performance:")
-                    print("test")
                     test_performance.append(evaluate_model(sequence_model, test_perplex_iter, 10000, vocab))
-                    print("train")
                     train_performance.append(evaluate_model(sequence_model, train_perplex_iter, 10000, vocab))
                     step_to_performance.append(num_steps)
                     progress.write("Test (Perplex, Accuracy): {:.6f}, {:.6f}".format(*test_performance[-1]))
