@@ -1,11 +1,5 @@
-import numpy as np
 import torch
-import torch.nn as nn
 import torch.optim as optim
-
-from models.mem_transformer import MemTransformerLM
-from utils.exp_utils import create_exp_dir
-from utils.data_parallel import BalancedDataParallel
 
 
 
@@ -39,13 +33,17 @@ def get_scheduler(self, optimizer, scheduler):
 
 
 def SequenceModel:
+    """
+    A generic, abstract class representing a sequence model
+    """
 
-    # # # # # # 
-    # Arguments:
-    #       depth (int)
-    #       width (int)
-    #       hyperparams (dict)
     def __init__(self, depth, width, hyperparams):
+        """
+        Arguments:
+            depth (int)
+            width (int)
+            hyperparams (dict) <these become class variables, which can be accessed like `self.param`>
+        """
         # Set hyperparameter values
         for k, v in hyperparams.items():
             setattr(self, k, v)
@@ -54,7 +52,17 @@ def SequenceModel:
 
 
     def init_model(self, depth, width):
-        ### Each subclass should implement this on their own
+        pass # Each subclass should implement this on their own
+
+    def get_model():
+        return self.model
+
+
+
+
+
+
+
 
 
 

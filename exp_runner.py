@@ -31,7 +31,6 @@ def set_spec_default_values(spec):
     for key, value in DEFAULT_VALUES.items():
         if key not in spec:
             spec[key] = value
-
     return spec
 
 
