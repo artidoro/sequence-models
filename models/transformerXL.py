@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from models.sequence_model import SequenceModel
 from models.mem_transformer import MemTransformerLM
@@ -20,6 +21,7 @@ class TransformerXL(SequenceModel):
     dropout = 0.0
     eval_tgt_len = 50
     ext_len = 0
+    fp16 = False
     mem_len = 0
     multi_gpu = True
     n_head = 10
@@ -102,12 +104,28 @@ class TransformerXL(SequenceModel):
 
 
     def init_model(self):
-        n_layer = (self.depth - 1) / 2 # depth = n_layer * (multi-head + ffn) + linear-softmax
+        n_layer = int((self.depth - 1) / 2) # depth = n_layer * (multi-head + ffn) + linear-softmax
         d_model = self.width
         d_inner = self.width * 2
 
         if self.d_embed < 0:
             self.d_embed = d_model
+
+        # Mixed-floating point precision (if fp16 is enabled, storage will be with half-precision)
+        if self.fp16 and self.device != 'cuda':
+            print('WARNING: fp16 requires cuda, ignoring fp16 option')
+            self.fp16 = False
+        else:
+            try:
+                from apex.fp16_utils import FP16_Optimizer
+                self.optimizer = FP16_Optimizer(self.optimizer,
+                    static_loss_scale=args.static_loss_scale,
+                    dynamic_loss_scale=args.dynamic_loss_scale,
+                    dynamic_loss_args={'init_scale': 2 ** 16})
+            except:
+                print('WARNING: apex not installed, ignoring fp16 option')
+                self.fp16 = False
+
 
         if self.restart:
             with open(os.path.join(restart_dir, 'model.pt'), 'rb') as f:
@@ -133,7 +151,7 @@ class TransformerXL(SequenceModel):
 
         if self.multi_gpu:
             self.model = self.model.to(self.device)
-            if args.gpu0_bsz >= 0:
+            if self.gpu0_bsz >= 0:
                 self.para_model = BalancedDataParallel(self.gpu0_bsz, self.model, dim=1).to(self.device)
             else:
                 self.para_model = nn.DataParallel(self.model, dim=1).to(self.device)
@@ -143,15 +161,15 @@ class TransformerXL(SequenceModel):
         return model
 
 
-    def predict(self, batch, padding=True):
+    def predict(self, inputs):
         """
-        Gets all one-step predictions for a batch of sentences.
-        For each context window output the next word.
-        seq[0:k] -> pred[k+1]
-        and so we output seq_len - k predictions
-        without padding
-        and seq_len predictions
-        with padding
+        Gets predictions for the next token of a batch of sequences (as a distribution over vocab tokens).
+        
+        Arguments:
+            inputs : a Tensor of shape (input_seq_length, batch_size)
+
+        Returns:
+            probs : a Tensor of shape (batch_size, vocab_size)
         """
 
         # Turn on evaluation mode which disables dropout.
@@ -167,27 +185,21 @@ class TransformerXL(SequenceModel):
                 self.ext_len, self.mem_len + self.tgt_len - self.eval_tgt_len)
 
         # Evaluation
-        total_len, total_loss = 0, 0.
         with torch.no_grad():
             mems = tuple()
-            for i, (data, target, seq_len) in enumerate(eval_iter):
-                if args.max_eval_steps > 0 and i >= args.max_eval_steps:
-                    break
-                ret = self.model(data, target, *mems)
-                loss, mems = ret[0], ret[1:]
-                loss = loss.mean()
-                total_loss += seq_len * loss.float().item()
-                total_len += seq_len
+            ret = self.model.forward_generate(inputs, *mems)
+            logits, mems = ret[0], ret[1:]
+            logits = logits[-1] # Only keep logits from the last step
+            probs = F.softmax(logits, dim=-1)
 
         # Switch back to the training mode
         self.model.reset_length(self.tgt_len, self.ext_len, self.mem_len)
         self.model.train()
 
-        return total_loss / total_len
-        
+        return probs        
 
 
-    def train_step(self, inputs, targets, mems=0, train_step=0):
+    def train_step(self, inputs, targets, mems=tuple(), train_step=0):
         """
         Performs an unsupervised train step for a given batch.
         Returns loss on batch.
@@ -199,20 +211,18 @@ class TransformerXL(SequenceModel):
         # Calculate loss
         ret = self.para_model(inputs, targets, *mems)
         loss, mems = ret[0], ret[1:]
-        print(inputs.shape, loss.shape)
         loss = loss.float().mean().type_as(loss)
         if self.fp16:
             self.optimizer.backward(loss)
         else:
             loss.backward()
-        train_loss += loss.float().item()
 
         # Gradient clipping
         if self.clip is not None:
             if self.fp16:
                 self.optimizer.clip_master_grads(self.clip)
             else:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), self.clip)
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
 
         self.optimizer.step()
 
