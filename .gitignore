@@ -1,6 +1,9 @@
 #Data
 generated_data/
 
+test/
+specs/
+
 #VSCode
 .vscode/
 
