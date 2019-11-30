@@ -4,9 +4,11 @@ import abc
 
 from abc import ABC, abstractmethod
 
+import config as c
 
 
-def get_optimizer(model, lr=0.0002, momentum=0.0):
+
+def get_optimizer(model, lr=c.DEFAULT_LEARNING_RATE, momentum=0.0):
     if optimizer.lower() == 'sgd':
         return optim.SGD(model.parameters(), lr=lr, momentum=momentum)
     elif optimizer.lower() == 'adam':
@@ -37,35 +39,24 @@ class SequenceModel(ABC):
     """
     The abstract model class for training.
     """
-    def __init__(self, depth, width):
-        self.depth = depth
-        self.width = width
+    def __init__(self, **hparams):
+        for k in c.REQUIRED_ATTRIBUTES:
+            assert k in hparams, "Missing required attribute {}".format(k)
 
-        self.model = self.init_model(depth, width, self.get_default_hyperparams())
+        for key, value in hparams.items():
+            setattr(self, key, value)
+
+            
+        self.model = self.init_model(**hparams)
 
     @abstractmethod
-    def init_model(self, depth, width, **hyperparams):
+    def init_model(self, **hparams):
         """
         Returns a model of the specified depth and width.
         """
         ### Each subclass should implement this on their own
         raise NotImplementedError()
 
-    @abstractmethod
-    def get_default_hyperparams(self):
-        """
-        Gets the default hyperparameters for a model.
-        Returns:
-            A dictioanry of hyperparameters.
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def train_step(self, batch_X, batch_Y, learning_rate):
-        """
-        Takes a step of training with a batch of X's and a batch of labels.
-        """
-        raise NotImplementedError()
 
     @abstractmethod
     def get_performance(self, X, Y):

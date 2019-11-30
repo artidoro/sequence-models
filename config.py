@@ -14,3 +14,18 @@ HYPERPARAMETERS = OrderedDict({
     'vocab': [5000],
     'sequence_dependence': [2]
 })
+
+
+DEFAULT_VALUES_SPEC = {
+    'device': 'cuda',
+    'lr': 0.0002,
+    'max_step': 100000,
+    'momentum': 0.0,
+    'scheduler': 'constant',
+    'warmup_step': 0,
+}
+
+REQUIRED_ATTRIBUTES = set(
+    list(DEFAULT_VALUES_SPEC.keys()) +
+    list(HYPERPARAMETERS.keys.keys())
+)

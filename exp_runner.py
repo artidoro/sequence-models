@@ -16,51 +16,17 @@ from models.transformerXL import TransformerXL
 from os.path import exists as E
 from os.path import join as J
 
+import config as c
+
 logger = logging.getLogger(__name__)
 
 
 def set_spec_default_values(spec):
-    DEFAULT_VALUES = {
-        'device': 'cuda',
-        'lr': 0.0002,
-        'max_step': 100000,
-        'momentum': 0.0,
-        'scheduler': 'constant',
-        'warmup_step': 0,
-    }
-
-    for key, value in DEFAULT_VALUES.items():
+    for key, value in c.DEFAULT_VALUES_SPEC.items():
         if key not in spec:
             spec[key] = value
     return spec
 
-
-def get_optimizer(model, lr=0.0002, momentum=0.0):
-    if optimizer.lower() == 'sgd':
-        return optim.SGD(model.parameters(), lr=lr, momentum=momentum)
-    elif optimizer.lower() == 'adam':
-        return optim.Adam(model.parameters(), lr=lr)
-    elif optimizer.lower() == 'adagrad':
-        return optim.Adagrad(model.parameters(), lr=lr)
-
-
-def get_scheduler(self, optimizer, scheduler):
-    if scheduler == 'cosine':
-        eta_min = self.eta_min if self.eta_min is not None else 0
-        return optim.lr_scheduler.CosineAnnealingLR(self.optimizer, self.max_step, eta_min=eta_min)
-    elif scheduler == 'inv_sqrt':
-        def lr_lambda(step):
-            # return a multiplier instead of a learning rate
-            if step == 0 and self.warmup_step == 0:
-                return 1.
-            else:
-                return 1. / (step ** 0.5) if step > self.warmup_step \
-                       else step / (self.warmup_step ** 1.5)
-        return optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lr_lambda)
-    elif scheduler == 'dev_perf':
-        return optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=self.decay_rate, patience=self.patience, min_lr=self.lr_min)
-    elif scheduler == 'constant':
-        pass
 
 
 def run_experiment(spec, experiment_directory):
@@ -100,7 +66,7 @@ def run_experiment(spec, experiment_directory):
 
     # TODO: initialize dataset iterators (i.e. `train_iter`)
     # TODO: genericize the initialization of `model`
-    sequence_model = TransformerXL(8, 64, spec)
+    sequence_model = TransformerXL(**spec)
     model = sequence_model.get_model()
     print(type(model))
 
