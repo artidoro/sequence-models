@@ -45,9 +45,9 @@ def evaluate_model(sequence_model, eval_iter, max_iterations):
 
     for idx, batch in tqdm.tqdm(enumerate(eval_iter)):
         predictions = sequence_model.predict(batch.text)
-        percentage_correct = (
-            predictions.view(-1, predictions.shape[-1]) ==  batch.target.flatten()
-        )
+        # percentage_correct = (
+        #     predictions.view(-1, predictions.shape[-1]) ==  batch.target.flatten()
+        # )
         cross_ent = cross_entropy_loss(predictions.view(-1, predictions.shape[-1]), batch.target.flatten())
         total_cross_ent += cross_ent.item()
 
