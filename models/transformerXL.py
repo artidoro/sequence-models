@@ -3,26 +3,31 @@ import torch.nn as nn
 
 from models.sequence_model import SequenceModel
 from models.mem_transformer import MemTransformerLM
-
+from models.utils.data_parallel import BalancedDataParallel
 
 
 class TransformerXL(SequenceModel):
 
     # Default parameter values
     attn_type = 0
+    gpu0_bsz = -1
     clamp_len = -1
+    clip = 0.25
     div_val = 1
     d_embed = -1
     d_head = 50
     dropatt = 0.0
     dropout = 0.0
+    eval_tgt_len = 50
     ext_len = 0
     mem_len = 0
+    multi_gpu = True
     n_head = 10
     param_init = 'normal'
     param_init_range = 0.1
     param_init_std = 0.02
     pre_lnorm = False
+    proj_init_std = 0.01
     restart = False
     same_length = False
     tgt_len = 70
@@ -126,6 +131,15 @@ class TransformerXL(SequenceModel):
         self.n_all_param = sum([p.nelement() for p in model.parameters()])
         self.n_nonemb_param = sum([p.nelement() for p in model.layers.parameters()])
 
+        if self.multi_gpu:
+            self.model = self.model.to(self.device)
+            if args.gpu0_bsz >= 0:
+                self.para_model = BalancedDataParallel(self.gpu0_bsz, self.model, dim=1).to(self.device)
+            else:
+                self.para_model = nn.DataParallel(self.model, dim=1).to(self.device)
+        else:
+            self.para_model = self.model.to(self.device)
+
         return model
 
 
@@ -139,15 +153,80 @@ class TransformerXL(SequenceModel):
         and seq_len predictions
         with padding
         """
-        raise NotImplementedError()
+
+        # Turn on evaluation mode which disables dropout.
+        self.model.eval()
+
+        # If the model does not use memory at all, make the ext_len longer.
+        # Otherwise, make the mem_len longer and keep the ext_len the same.
+        if self.mem_len == 0:
+            self.model.reset_length(self.eval_tgt_len, 
+                self.ext_len + self.tgt_len - self.eval_tgt_len, self.mem_len)
+        else:
+            self.model.reset_length(self.eval_tgt_len,
+                self.ext_len, self.mem_len + self.tgt_len - self.eval_tgt_len)
+
+        # Evaluation
+        total_len, total_loss = 0, 0.
+        with torch.no_grad():
+            mems = tuple()
+            for i, (data, target, seq_len) in enumerate(eval_iter):
+                if args.max_eval_steps > 0 and i >= args.max_eval_steps:
+                    break
+                ret = self.model(data, target, *mems)
+                loss, mems = ret[0], ret[1:]
+                loss = loss.mean()
+                total_loss += seq_len * loss.float().item()
+                total_len += seq_len
+
+        # Switch back to the training mode
+        self.model.reset_length(self.tgt_len, self.ext_len, self.mem_len)
+        self.model.train()
+
+        return total_loss / total_len
+        
 
 
-    def train_step(self, batch):
-        """Performs an unsupervised train step for a given batch.
+    def train_step(self, inputs, targets, mems=mems, train_step=0):
+        """
+        Performs an unsupervised train step for a given batch.
         Returns loss on batch.
         """
-        raise NotImplementedError()
 
+        # Zero out model gradients
+        self.model.zero_grad()
+
+        # Calculate loss
+        ret = self.para_model(inputs, targets, *mems)
+        loss, mems = ret[0], ret[1:]
+        print(inputs.shape, loss.shape)
+        loss = loss.float().mean().type_as(loss)
+        if self.fp16:
+            self.optimizer.backward(loss)
+        else:
+            loss.backward()
+        train_loss += loss.float().item()
+
+        # Gradient clipping
+        if self.clip is not None:
+            if self.fp16:
+                self.optimizer.clip_master_grads(self.clip)
+            else:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), self.clip)
+
+        self.optimizer.step()
+
+        # Step-wise learning rate annealing
+        if self.scheduler_type in ['cosine', 'constant', 'dev_perf']:
+            # linear warmup stage
+            if train_step < self.warmup_step:
+                curr_lr = self.lr * train_step / self.warmup_step
+                self.optimizer.param_groups[0]['lr'] = curr_lr
+            else:
+                if self.scheduler_type == 'cosine':
+                    self.scheduler.step(train_step)
+        elif self.scheduler_type == 'inv_sqrt':
+            self.scheduler.step(train_step)
 
 
 
