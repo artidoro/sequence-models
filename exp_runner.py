@@ -172,7 +172,7 @@ def run_experiment(spec, experiment_directory):
 
     # DO SOMETHING WITH THIS SPEC DUDE!
     print(spec)
-    time.sleep(10)
+    # time.sleep(10)
     # THE GPU
     print(os.environ.get(c.CVISIBLE, None))
     
