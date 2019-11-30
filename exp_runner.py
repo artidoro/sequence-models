@@ -148,7 +148,7 @@ def run_experiment(spec, experiment_directory):
                 warmup_step = spec['warmup_step']
                 if scheduler_type in ['cosine', 'constant', 'dev_perf']:
                     # linear warmup stage
-                    if train_step < warmup_step
+                    if train_step < warmup_step:
                         curr_lr = spec['lr'] * train_step / warmup_step
                         optimizer.param_groups[0]['lr'] = curr_lr
                     else:

@@ -2,6 +2,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import abc
+
+from abc import ABC, abstractmethod
 
 from models.mem_transformer import MemTransformerLM
 from utils.exp_utils import create_exp_dir
@@ -38,25 +41,44 @@ def get_scheduler(self, optimizer, scheduler):
 
 
 
-def SequenceModel:
+class SequenceModel(ABC):
+    """
+    The abstract model class for training.
+    """
+    def __init__(self, depth, width):
+        self.depth = depth
+        self.width = width
 
-    # # # # # # 
-    # Arguments:
-    #       depth (int)
-    #       width (int)
-    #       hyperparams (dict)
-    def __init__(self, depth, width, hyperparams):
-        # Set hyperparameter values
-        for k, v in hyperparams.items():
-            setattr(self, k, v)
-
-        self.model = self.init_model(depth, width)
+        self.model = self.init_model(depth, width, self.get_default_hyperparams())
 
 
-    def init_model(self, depth, width):
+    @abstractmethod
+    def init_model(self, depth, width, **hyperparams):
+        """
+        Returns a model of the specified depth and width.
+        """
         ### Each subclass should implement this on their own
+        raise NotImplementedError()
 
+    @abstractmethod
+    def get_default_hyperparams(self):
+        """
+        Gets the default hyperparameters for a model.
+        Returns:
+            A dictioanry of hyperparameters.
+        """
+        raise NotImplementedError()
 
+    @abstractmethod
+    def train_step(self, batch_X, batch_Y, learning_rate):
+        """
+        Takes a step of training with a batch of X's and a batch of labels.
+        """
+        raise NotImplementedError()
 
-
-
+    @abstractmethod
+    def get_performance(self, X, Y):
+        """
+        Gets the loss and perplexity for a given X,Y.
+        """
+        raise NotImplementedError()
