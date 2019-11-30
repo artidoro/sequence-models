@@ -7,10 +7,26 @@ import json
 import config as c
 import time
 
+import torch
+import torch.optim as optim
+
+from models.sequence_model import SequenceModel
+from models.transformerXL import TransformerXL
+
 from os.path import exists as E
 from os.path import join as J
 
+import config as c
+
 logger = logging.getLogger(__name__)
+
+
+def set_spec_default_values(spec):
+    for key, value in c.DEFAULT_VALUES_SPEC.items():
+        if key not in spec:
+            spec[key] = value
+    return spec
+
 
 
 def run_experiment(spec, experiment_directory):
@@ -27,6 +43,8 @@ def run_experiment(spec, experiment_directory):
     try:
         name = spec["name"]
         # Unpack additional arguments <here>
+
+        spec = set_spec_default_values(spec)
 
     except KeyError:
         logger.error("Invalid experiment specification: {}".format(spec))
@@ -45,6 +63,78 @@ def run_experiment(spec, experiment_directory):
     
     # Todo Run the actual experiment here <> @Ini
     # For now let's just print out the specification
+
+    # TODO: initialize dataset iterators (i.e. `train_iter`)
+    # TODO: genericize the initialization of `model`
+    sequence_model = TransformerXL(**spec)
+    model = sequence_model.get_model()
+    optimizer = sequence_model.get_optimizer()
+    scheduler = sequence_model.get_scheduler()
+
+    # # # # # # #
+    # Expects:
+    #   model
+    #   spec['optimizer'] in ['sgd', 'adam', 'adagrad']
+    #   spec['lr'] (float)
+    #   Optional: spec['momentum'] (float)
+
+    max_step = spec['max_step']
+    train_step = 0
+    train_loss = 0
+    best_val_loss = None
+
+    # try:
+    #     for epoch in itertools.count(start=1):
+    #         model.train()
+    #         mems = tuple()
+    #         for batch, (data, target, seq_len) in enumerate(train_iter):
+    #             model.zero_grad()
+
+    #             ret = model.to(spec['device'])(data, target, *mems)
+    #             loss, mems = ret[0], ret[1:]
+    #             loss = loss.float().mean().type_as(loss)
+    #             if self.fp16:
+    #                 self.optimizer.backward(loss)
+    #             else:
+    #                 loss.backward()
+    #             self.train_loss += loss.float().item()
+
+    #             # Gradient clipping
+    #             if self.clip is not None:
+    #                 if self.fp16:
+    #                     self.optimizer.clip_master_grads(self.clip)
+    #                 else:
+    #                     torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
+
+    #             self.optimizer.step()
+
+    #             # Step-wise learning rate annealing
+    #             train_step += 1
+    #             scheduler_type = spec['scheduler']
+    #             warmup_step = spec['warmup_step']
+    #             if scheduler_type in ['cosine', 'constant', 'dev_perf']:
+    #                 # linear warmup stage
+    #                 if train_step < warmup_step:
+    #                     curr_lr = spec['lr'] * train_step / warmup_step
+    #                     optimizer.param_groups[0]['lr'] = curr_lr
+    #                 else:
+    #                     if scheduler_type.scheduler == 'cosine':
+    #                         scheduler.step(train_step)
+    #             elif self.scheduler_type == 'inv_sqrt':
+    #                 scheduler.step(train_step)
+
+    #             # TODO: Logging, validation
+
+    #             if train_step >= max_step: 
+    #                 break
+
+    #         if train_step >= max_step:
+    #             print('-' * 100)
+    #             print('End of training')
+
+    # except KeyboardInterrupt:
+    #     print('-' * 100)
+    #     print('Exiting from training early')
 
 
     # DO SOMETHING WITH THIS SPEC DUDE!
