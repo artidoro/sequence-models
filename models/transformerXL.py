@@ -8,8 +8,8 @@ from models.mem_transformer import MemTransformerLM
 
 class TransformerXL(SequenceModel):
 
-    def __init__(self, depth, width):
-        super().__init__(depth, width, hyperparams)
+    def __init__(self, **hyperparams):
+        super().__init__(**hyperparams)
 
 
     def init_weight(self, weight):

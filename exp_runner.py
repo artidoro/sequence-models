@@ -10,7 +10,7 @@ import time
 import torch
 import torch.optim as optim
 
-from models.sequence_model import get_optimizer, get_scheduler, SequenceModel
+from models.sequence_model import SequenceModel
 from models.transformerXL import TransformerXL
 
 from os.path import exists as E
