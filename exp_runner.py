@@ -61,11 +61,11 @@ def run_experiment(spec, experiment_directory):
 if __name__ == '__main__':
     # One can also run the experiment directly:
     parser = argparse.ArgumentParser(description="Runs an experiment directly from its JSON.")
-    parser.add_argument('specification_json', type=str, help='The JSON which specifies the experiment.')
+    parser.add_argument('specification_json', type=str, help='The path to a JSON which specifies the experiment.')
     parser.add_argument('output_dir', type=str, help='The directory where the output will be written.')
     args = parser.parse_args()
 
     with open(args.specification_json, 'r') as f:
         spec = json.load(f)
 
-    run_experiment((spec, os.path.join(args.output_dir, spec["name"])))
+    run_experiment(spec, os.path.join(args.output_dir, spec["name"]))
