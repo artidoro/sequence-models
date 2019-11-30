@@ -32,7 +32,7 @@ def get_scheduler(self, optimizer, scheduler):
 
 
 
-def SequenceModel:
+class SequenceModel:
     """
     A generic, abstract class representing a sequence model
     """
@@ -44,6 +44,7 @@ def SequenceModel:
             width (int)
             hyperparams (dict) <these become class variables, which can be accessed like `self.param`>
         """
+
         # Set hyperparameter values
         for k, v in hyperparams.items():
             setattr(self, k, v)
@@ -54,17 +55,8 @@ def SequenceModel:
     def init_model(self, depth, width):
         pass # Each subclass should implement this on their own
 
-    def get_model():
+
+    def get_model(self):
         return self.model
-
-
-
-
-
-
-
-
-
-
 
 

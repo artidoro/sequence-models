@@ -11,6 +11,7 @@ import torch
 import torch.optim as optim
 
 from models.sequence_model import get_optimizer, get_scheduler, SequenceModel
+from models.transformerXL import TransformerXL
 
 from os.path import exists as E
 from os.path import join as J
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 def set_spec_default_values(spec):
     DEFAULT_VALUES = {
-        'device': 'gpu',
+        'device': 'cuda',
         'lr': 0.0002,
         'max_step': 100000,
         'momentum': 0.0,
@@ -98,9 +99,10 @@ def run_experiment(spec, experiment_directory):
     # For now let's just print out the specification
 
     # TODO: initialize dataset iterators (i.e. `train_iter`)
-    # TODO: actually initialize `model`
-    sequence_model = SequenceModel(8, 64, {})
-    model = sequence_model.model
+    # TODO: genericize the initialization of `model`
+    sequence_model = TransformerXL(8, 64, spec)
+    model = sequence_model.get_model()
+    print(type(model))
 
     # # # # # # #
     # Expects:
@@ -172,7 +174,7 @@ def run_experiment(spec, experiment_directory):
 
     # DO SOMETHING WITH THIS SPEC DUDE!
     print(spec)
-    # time.sleep(10)
+    time.sleep(10)
     # THE GPU
     print(os.environ.get(c.CVISIBLE, None))
     
