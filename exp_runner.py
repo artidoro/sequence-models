@@ -45,15 +45,18 @@ def run_experiment(spec, experiment_directory):
     
     # Unpack some of the specification information
     try:
-        name = spec["name"]
-        hmm_hidden = spec["hmm_hidden"]
-        vocab = spec["vocab"]
-        batch_size = spec["batch_size"]
-        sequence_dependence = spec["sequence_dependence"]
-        bttp_len = spec["bttp_len"]
-        # Unpack additional arguments <here>
-
         spec = set_spec_default_values(spec)
+
+        algorithm = spec["algorithm"]
+        batch_size = spec['batch_size']
+        bttp_len = spec['bttp_len']
+        device = spec['device']
+        hmm_hidden = spec['hmm_hidden']
+        max_step = spec['max_step']
+        name = spec['name']
+        sequence_dependence = spec['sequence_dependence']
+        vocab = spec['vocab']
+        # Unpack additional arguments <here>
 
     except KeyError:
         logger.error("Invalid experiment specification: {}".format(spec))
@@ -70,46 +73,40 @@ def run_experiment(spec, experiment_directory):
     with open(J(experiment_directory, 'params.json'), 'w') as f:
         json.dump(spec, f)
 
-    # Todo Run the actual experiment here <> @Ini
-    # For now let's just print out the specification
-
-    # TODO: initialize dataset iterators (i.e. `train_iter`)
-    train_iter = [] ### REPLACE 
-    val_iter = [] ##### WITH
-    test_iter = [] #### ACTUAL ITERATORS
-
-    if spec["algorithm"] == 'transformer':
+    # Choose sequence model type
+    if algorithm == 'transformer':
         sequence_model = TransformerXL(**spec)
-    elif spec["algorithm"] == 'lstm':
+    elif algorithm == 'lstm':
         sequence_model = LSTMModel(**spec)
-    elif spec["algorithm"] == 'cnn':
+    elif algorithm == 'cnn':
         sequence_model = GatedCNN(**spec)
 
 
 
-
     # TODO: loop over trainig files/algorithm specification
-    data_file = 'V{}hmm_hidden_{}_lag_{}_vocab_{}.txt'.format(
+    ROOT_PATH = 'generated_data'
+    DATA_FILE = 'V{}hmm_hidden_{}_lag_{}_vocab_{}.txt'.format(
         c.DATA_GENERATION_VERSION, hmm_hidden, sequence_dependence, vocab)
 
+    # Create dataset iterators
+    train_path = os.path.join('train', DATA_FILE)
+    val_path = os.path.join('validation', DATA_FILE)
+    test_path = os.path.join('test', DATA_FILE)
+    train_iter, val_iter, test_iter = torchtext_batch_iterators(
+        'generated_data', train_path, val_path, test_path,
+        batch_size=batch_size, bptt_len=bttp_len, device=device, batch_first=False, repeat=True)
+
+    # Model
     model = sequence_model.get_model()
     optimizer = sequence_model.get_optimizer()
     scheduler = sequence_model.get_scheduler()
 
-    max_step = spec['max_step']
     train_step = 0
     train_loss = 0
     best_val_loss = None
 
-    # Write training universal training code for every mode.
-    train_iter, validation_iter, test_iter = torchtext_batch_iterators('generated_data',
-        'train/' + data_file, 'validation/' + data_file, 'test/' + data_file,
-        batch_size=batch_size, bptt_len=bttp_len, device=None, batch_first=False, repeat=True)
-        # TODO: pass the device to this call so that the data is already on the GPU.
-
     # Training Loop
     try:
-        # TODO: somewhere in here compute perplexity or validation loss or whatever, and save the best performing models with their corresponding stats
         for epoch in itertools.count(start=1):
             model.train()
             mems = tuple()
