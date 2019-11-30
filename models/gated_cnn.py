@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from models.sequence_model import SequenceModel
+from torch.autograd import Variable
+
 
 
 class GatedCNNModel(nn.Module):
@@ -22,10 +25,8 @@ class GatedCNNModel(nn.Module):
                  out_chs,
                  res_block_count,
                  ans_size):
-        super(GatedCNN, self).__init__()
+        super().__init__()
         self.res_block_count = res_block_count
-        # self.embd_size = embd_size
-
         self.embedding = nn.Embedding(vocab_size, embd_size)
 
         # nn.Conv2d(in_channels, out_channels, kernel_size, stride=1, padding=0, ...
@@ -39,7 +40,8 @@ class GatedCNNModel(nn.Module):
         self.b = nn.ParameterList([nn.Parameter(torch.randn(1, out_chs, 1, 1)) for _ in range(n_layers)])
         self.c = nn.ParameterList([nn.Parameter(torch.randn(1, out_chs, 1, 1)) for _ in range(n_layers)])
 
-        self.fc = nn.Linear(out_chs*seq_len, ans_size)
+        self.fc = nn.Linear(out_chs * seq_len, ans_size)
+
 
     def forward(self, x):
         # x: (N, seq_len)
@@ -58,20 +60,20 @@ class GatedCNNModel(nn.Module):
         A += self.b_0.repeat(1, 1, seq_len, 1)
         B = self.conv_gate_0(x) # (bs, Cout, seq_len, 1)
         B += self.c_0.repeat(1, 1, seq_len, 1)
-        h = A * F.sigmoid(B)    # (bs, Cout, seq_len, 1)
+        h = A * torch.sigmoid(B)    # (bs, Cout, seq_len, 1)
         res_input = h # TODO this is h1 not h0
 
         for i, (conv, conv_gate) in enumerate(zip(self.conv, self.conv_gate)):
             A = conv(h) + self.b[i].repeat(1, 1, seq_len, 1)
             B = conv_gate(h) + self.c[i].repeat(1, 1, seq_len, 1)
-            h = A * F.sigmoid(B) # (bs, Cout, seq_len, 1)
+            h = A * torch.sigmoid(B) # (bs, Cout, seq_len, 1)
             if i % self.res_block_count == 0: # size of each residual block
                 h += res_input
                 res_input = h
 
         h = h.view(bs, -1) # (bs, Cout*seq_len)
         out = self.fc(h) # (bs, ans_size)
-        out = F.log_softmax(out)
+        out = F.log_softmax(out, dim=-1)
 
         return out
 
@@ -80,13 +82,12 @@ class GatedCNN(SequenceModel):
 
     # Default parameter values
     vocab_size = 2000
-    seq_len = 21
-    embd_size = 200
+    seq_len = 60
+    embedding_dim = 200
     n_layers = 10
-    kernel = (5, embd_size)
+    kernel = (5, embedding_dim)
     out_chs = 64
     res_block_count = 5
-    batch_size = 64
 
 
     def __init__(self, **hyperparams):
@@ -96,24 +97,46 @@ class GatedCNN(SequenceModel):
     def init_model(self, depth=10, width=500):
         self.n_layers = self.depth
         self.out_chs = self.width
-        self.kernel[1] = self.embd_size
+        self.vocab_size = self.vocab
+        self.kernel = (self.kernel[0], self.embedding_dim)
 
-        model = GatedCNN(self.seq_len, self.vocab_size, self.embd_size, self.n_layers, self.kernel, self.out_chs, self.res_block_count, self.vocab_size)
+        model = GatedCNNModel(self.seq_len, self.vocab_size, self.embedding_dim, self.n_layers, self.kernel, self.out_chs, self.res_block_count, self.vocab_size)
+        if torch.cuda.is_available():
+            model.cuda()
         self.model = model
         return model
 
 
-    def predict(self, batch, padding=True):
+    def to_var(self, x):
+        if torch.cuda.is_available():
+            x = x.cuda()
+        return Variable(x)
+
+
+    def predict(self, inputs):
         """
-        Gets all one-step predictions for a batch of sentences.
-        For each context window output the next word.
-        seq[0:k] -> pred[k+1]
-        and so we output seq_len - k predictions
-        without padding
-        and seq_len predictions
-        with padding
+        Gets predictions for the next token of a batch of sequences (as a distribution over vocab tokens).
+        
+        Arguments:
+            inputs : a Tensor of shape (batch_size, input_seq_length)
+
+        Returns:
+            probs : a Tensor of shape (batch_size, vocab_size)
         """
-        raise NotImplementedError()
+
+        # Turn on evaluation mode
+        self.model.eval()
+
+        # Evaluation
+        with torch.no_grad():
+            X = self.to_var(inputs)
+            log_probs = self.model(X)
+            probs = torch.exp(log_probs)
+
+        # Switch back to the training mode
+        self.model.train()
+
+        return probs
 
     
     def train_step(self, inputs, targets, train_step=0):
@@ -121,22 +144,18 @@ class GatedCNN(SequenceModel):
         Performs an unsupervised train step for a given batch.
         Returns loss on batch.
         """
-        X = to_var(torch.LongTensor(inputs)) # (bs, seq_len)
-        Y = to_var(torch.LongTensor(targets)) # (bs,)
-            # print(X.size(), Y.size())
-            # print(X)
-            pred = model(X) # (bs, ans_size)
-            # _, pred_ids = torch.max(pred, 1)
-            loss = loss_fn(pred, Y)
-            if batch_ct % 100 == 0:
-                print('loss: {:.4f}'.format(loss.data[0]))
+        X = self.to_var(inputs)
+        Y = self.to_var(targets[:, -1]) # GatedCNN only expects a 1-D array of the next token in each sequence
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+        pred = self.model(X)
+        loss = nn.NLLLoss()(pred, Y)
 
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
+        # Update scheduler
+        self.update_scheduler(train_step)
 
-
-
+        return loss
 
