@@ -12,11 +12,10 @@ class LSTMModel(SequenceModel):
         return RNNModel(
             'LSTM',
             self.vocab,
-            self.embedding_dim, 
-            self.width, 
+            self.embedding_dim,
+            self.hidden_dim,
             self.depth)
 
-    
     def predict(self, inputs, padding=True):
         """
         Gets all one-step predictions for a batch of sentences.
@@ -36,6 +35,7 @@ class LSTMModel(SequenceModel):
         
         
     def train_step(self, inputs, targets, train_step=0):
+
         """Performs an unsupervised train step for a given batch.
         Returns loss on batch.
         """
@@ -57,14 +57,6 @@ class LSTMModel(SequenceModel):
         hidden = self.repackage_hidden(hidden)
         self.model.zero_grad()
         output, hidden = self.model(inputs, hidden)
-        # loss = lossfn(output.view(-1, self.vocab), targets)
-        # output = output.view(-1, self.vocab)
-        # targets = targets.flatten()
-        # print(output.shape)
-        # print(targets.shape)
-        # print(output)
-        # print(targets)
-
         loss = lossfn(output.view(-1, self.vocab), targets.flatten())
         loss.backward()
         self.optimizer.step()
@@ -83,6 +75,7 @@ class LSTMModel(SequenceModel):
 
         return total_loss
 
+
     def repackage_hidden(self, h):
         """Wraps hidden states in new Tensors, to detach them from their history."""
         if isinstance(h, torch.Tensor):
@@ -92,11 +85,10 @@ class LSTMModel(SequenceModel):
 
 
 
-
 class RNNModel(nn.Module):
     """Container module with an encoder, a recurrent module, and a decoder."""
 
-    def __init__(self, rnn_type, ntoken, ninp, nhid, nlayers, dropout=0.5, tie_weights=False):
+    def __init__(self, rnn_type, ntoken, ninp, nhid, nlayers, dropout=0.5, tie_weights=True):
         super(RNNModel, self).__init__()
         self.drop = nn.Dropout(dropout)
         self.encoder = nn.Embedding(ntoken, ninp)
@@ -138,7 +130,7 @@ class RNNModel(nn.Module):
         emb = self.drop(self.encoder(input))
         output, hidden = self.rnn(emb, hidden)
         output = self.drop(output)
-        decoded = self.decoder(output)
+        decoded = self.decoder(output.reshape(-1, output.size(2)))
         return decoded.view(output.size(0), output.size(1), decoded.size(1)), hidden
 
     def init_hidden(self, bsz):
@@ -148,5 +140,3 @@ class RNNModel(nn.Module):
                     weight.new_zeros(self.nlayers, bsz, self.nhid))
         else:
             return weight.new_zeros(self.nlayers, bsz, self.nhid)
-
-    
