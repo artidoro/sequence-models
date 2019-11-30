@@ -29,15 +29,17 @@ class SequenceModel(ABC):
         ### Each subclass should implement this on their own
         raise NotImplementedError()
 
+
     def init_optimizer(self):
         """Initializes the optimizer
         """
         if self.optimizer_type.lower() == 'sgd':
-            return optim.SGD(self.model.parameters(), lr=lr, momentum=momentum)
+            return optim.SGD(self.model.parameters(), lr=self.lr, momentum=self.momentum)
         elif self.optimizer_type.lower() == 'adam':
-            return optim.Adam(self.model.parameters(), lr=lr)
+            return optim.Adam(self.model.parameters(), lr=self.lr)
         elif self.optimizer_type.lower() == 'adagrad':
-            return optim.Adagrad(self.model.parameters(), lr=lr)
+            return optim.Adagrad(self.model.parameters(), lr=self.lr)
+
 
     def init_scheduler(self):
         """Initializes the scheduler
@@ -56,9 +58,50 @@ class SequenceModel(ABC):
             return optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lr_lambda)
         elif self.scheduler_type == 'dev_perf':
             return optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=self.decay_rate, patience=self.patience, min_lr=self.lr_min)
-        elif self.scheduler_type == 'constant':
-            # TODO: implement the constant scheduler
-            return None
+
+
+    def update_scheduler(self, train_step):
+        """
+        Updates the scheduler for the specified train_step
+        """
+
+        # Step-wise learning rate annealing
+        if self.scheduler_type in ['cosine', 'constant', 'dev_perf']:
+            # linear warmup stage
+            if train_step < self.warmup_step:
+                curr_lr = self.lr * train_step / self.warmup_step
+                self.optimizer.param_groups[0]['lr'] = curr_lr
+            else:
+                if self.scheduler_type == 'cosine':
+                    self.scheduler.step(train_step)
+        elif self.scheduler_type == 'inv_sqrt':
+            self.scheduler.step(train_step)
+
+
+    @abstractmethod
+    def predict(self, inputs):
+        """
+        Gets predictions for the next token of a batch of sequences (as a distribution over vocab tokens).
+        
+        Arguments:
+            inputs : a Tensor of shape (batch_size, input_seq_length)
+
+        Returns:
+            probs : a Tensor of shape (batch_size, vocab_size)
+        """
+        raise NotImplementedError()
+
+    
+    @abstractmethod
+    def train_step(self, inputs, targets, train_step=0, mems=tuple()):
+        """
+        Performs an unsupervised train step for a given batch.
+        Returns loss on batch.
+
+        `train_step` is needed whenever the scheduler is non-constant
+        `mems` is only used for TransformerXL
+        """
+        raise NotImplementedError()
 
     def get_model(self):
         return self.model

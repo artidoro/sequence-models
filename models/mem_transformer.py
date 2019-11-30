@@ -759,6 +759,30 @@ class MemTransformerLM(nn.Module):
         else:
             return [loss] + new_mems
 
+    def forward_generate(self, data, *mems):
+        if not mems: mems = self.init_mems()
+
+        tgt_len = data.size(0)
+        batch_size = data.size(1)
+        hidden, new_mems = self._forward(data, mems=mems)
+
+        pred_hid = hidden[-tgt_len:]
+
+        assert self.crit.n_clusters == 0
+
+        logits = self.crit._compute_logit(
+            pred_hid.view(-1, pred_hid.size(-1)),
+            self.crit.out_layers[0].weight,
+            self.crit.out_layers[0].bias,
+            self.crit.out_projs[0])
+        logits = logits.view(tgt_len, batch_size, -1)
+
+        if new_mems is None:
+            return [logits]
+        else:
+            return [logits] + new_mems
+            
+
 if __name__ == '__main__':
     import argparse
 
