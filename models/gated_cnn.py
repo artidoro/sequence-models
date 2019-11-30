@@ -116,11 +116,24 @@ class GatedCNN(SequenceModel):
         raise NotImplementedError()
 
     
-    def train_step(self, batch):
-        """Performs an unsupervised train step for a given batch.
+    def train_step(self, inputs, targets, train_step=0):
+        """
+        Performs an unsupervised train step for a given batch.
         Returns loss on batch.
         """
-        raise NotImplementedError()
+        X = to_var(torch.LongTensor(inputs)) # (bs, seq_len)
+        Y = to_var(torch.LongTensor(targets)) # (bs,)
+            # print(X.size(), Y.size())
+            # print(X)
+            pred = model(X) # (bs, ans_size)
+            # _, pred_ids = torch.max(pred, 1)
+            loss = loss_fn(pred, Y)
+            if batch_ct % 100 == 0:
+                print('loss: {:.4f}'.format(loss.data[0]))
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
 
 

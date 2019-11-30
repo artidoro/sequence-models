@@ -60,13 +60,31 @@ class SequenceModel(ABC):
             return optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=self.decay_rate, patience=self.patience, min_lr=self.lr_min)
 
 
+    def update_scheduler(self, train_step):
+        """
+        Updates the scheduler for the specified train_step
+        """
+
+        # Step-wise learning rate annealing
+        if self.scheduler_type in ['cosine', 'constant', 'dev_perf']:
+            # linear warmup stage
+            if train_step < self.warmup_step:
+                curr_lr = self.lr * train_step / self.warmup_step
+                self.optimizer.param_groups[0]['lr'] = curr_lr
+            else:
+                if self.scheduler_type == 'cosine':
+                    self.scheduler.step(train_step)
+        elif self.scheduler_type == 'inv_sqrt':
+            self.scheduler.step(train_step)
+
+
     @abstractmethod
     def predict(self, inputs):
         """
         Gets predictions for the next token of a batch of sequences (as a distribution over vocab tokens).
         
         Arguments:
-            inputs : a Tensor of shape (input_seq_length, batch_size)
+            inputs : a Tensor of shape (batch_size, input_seq_length)
 
         Returns:
             probs : a Tensor of shape (batch_size, vocab_size)

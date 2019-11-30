@@ -115,7 +115,7 @@ class TransformerXL(SequenceModel):
         if self.fp16 and self.device != 'cuda':
             print('WARNING: fp16 requires cuda, ignoring fp16 option')
             self.fp16 = False
-        else:
+        elif self.fp16:
             try:
                 from apex.fp16_utils import FP16_Optimizer
                 self.optimizer = FP16_Optimizer(self.optimizer,
@@ -166,7 +166,7 @@ class TransformerXL(SequenceModel):
         Gets predictions for the next token of a batch of sequences (as a distribution over vocab tokens).
         
         Arguments:
-            inputs : a Tensor of shape (input_seq_length, batch_size)
+            inputs : a Tensor of shape (batch_size, input_seq_length)
 
         Returns:
             probs : a Tensor of shape (batch_size, vocab_size)
@@ -186,10 +186,15 @@ class TransformerXL(SequenceModel):
 
         # Evaluation
         with torch.no_grad():
+            # Transpose data, since MemTransformerLM expects batches in each column
+            inputs = inputs.t()
+
+            # Get logits
             mems = tuple()
             ret = self.model.forward_generate(inputs, *mems)
             logits, mems = ret[0], ret[1:]
             logits = logits[-1] # Only keep logits from the last step
+
             probs = F.softmax(logits, dim=-1)
 
         # Switch back to the training mode
@@ -207,6 +212,9 @@ class TransformerXL(SequenceModel):
 
         # Zero out model gradients
         self.model.zero_grad()
+
+        # Transpose data, since MemTransformerLM expects batches in each column
+        inputs, targets = inputs.t(), targets.t()
 
         # Calculate loss
         ret = self.para_model(inputs, targets, *mems)
@@ -226,19 +234,9 @@ class TransformerXL(SequenceModel):
 
         self.optimizer.step()
 
-        # Step-wise learning rate annealing
-        if self.scheduler_type in ['cosine', 'constant', 'dev_perf']:
-            # linear warmup stage
-            if train_step < self.warmup_step:
-                curr_lr = self.lr * train_step / self.warmup_step
-                self.optimizer.param_groups[0]['lr'] = curr_lr
-            else:
-                if self.scheduler_type == 'cosine':
-                    self.scheduler.step(train_step)
-        elif self.scheduler_type == 'inv_sqrt':
-            self.scheduler.step(train_step)
+        # Update scheduler
+        self.update_scheduler(train_step)
 
-
-
+        return loss
 
 
