@@ -101,7 +101,7 @@ def run_experiment(spec, experiment_directory):
     # Write training universal training code for every mode.
     train_iter, validation_iter, test_iter = torchtext_batch_iterators('generated_data',
         'train/' + data_file, 'validation/' + data_file, 'test/' + data_file,
-        batch_size=batch_size, bptt_len=bttp_len, device=None, batch_first=True, repeat=True)
+        batch_size=batch_size, bptt_len=bttp_len, device=None, batch_first=False, repeat=True)
         # TODO: pass the device to this call so that the data is already on the GPU.
 
 

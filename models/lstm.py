@@ -44,28 +44,39 @@ class LSTMModel(SequenceModel):
         seq_len = inputs.shape[1]
         self.model.train()
         total_loss = 0
+        lossfn = nn.CrossEntropyLoss()
 
         hidden = self.model.init_hidden(batch_size)
-        for batch, i in enumerate(range(0, seq_len, self.bptt_len)):
-            bp_seq_len = min(self.bptt_len, seq_len - i)
-            inp = inputs[:, i:i+bp_seq_len]
-            tar = targets[:, i:i+bp_seq_len]
-            # Starting each batch, we detach the hidden state from how it was previously produced.
-            # If we didn't, the model would try backpropagating all the way to start of the dataset.
-            hidden = self.repackage_hidden(hidden)
-            self.model.zero_grad()
-            output, hidden = self.model(data, hidden)
-            loss = nn.CrossEntropyLoss(output.view(-1, self.vocab), targets)
-            self.optimizer.backward(loss)
+        # for batch, i in enumerate(range(0, seq_len, self.bptt_len)):
+        #     bp_seq_len = min(self.bptt_len, seq_len - i)
+        #     inp = inputs[:, i:i+bp_seq_len]
+        #     tar = targets[:, i:i+bp_seq_len]
+        #     # Starting each batch, we detach the hidden state from how it was previously produced.
+        #     # If we didn't, the model would try backpropagating all the way to start of the dataset.
+        hidden = self.repackage_hidden(hidden)
+        self.model.zero_grad()
+        output, hidden = self.model(inputs, hidden)
+        # loss = lossfn(output.view(-1, self.vocab), targets)
+        # output = output.view(-1, self.vocab)
+        # targets = targets.flatten()
+        # print(output.shape)
+        # print(targets.shape)
+        # print(output)
+        # print(targets)
 
-            # TODO: UPDATE THIS TO RESPECT THE OPTIMIZERS STUFF>
-            # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
-            for p in self.model.parameters():
-                p.data.add_(-self.lr, p.grad.data)
+        loss = lossfn(output.view(-1, self.vocab), targets.flatten())
+        loss.backward()
+        self.optimizer.step()
 
-            total_loss += loss.item()
-            
+        # # TODO: UPDATE THIS TO RESPECT THE OPTIMIZERS STUFF>
+        # # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
+        # torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
+
+        # for p in self.model.parameters(): # TODO: What is this for?
+        #     p.data.add_(-self.lr, p.grad.data)
+
+        total_loss += loss.item()
+
         return total_loss
     def repackage_hidden(self, h):
         """Wraps hidden states in new Tensors, to detach them from their history."""
@@ -122,7 +133,7 @@ class RNNModel(nn.Module):
         emb = self.drop(self.encoder(input))
         output, hidden = self.rnn(emb, hidden)
         output = self.drop(output)
-        decoded = self.decoder(output.view(output.size(0)*output.size(1), output.size(2)))
+        decoded = self.decoder(output)
         return decoded.view(output.size(0), output.size(1), decoded.size(1)), hidden
 
     def init_hidden(self, bsz):
