@@ -8,6 +8,27 @@ from models.mem_transformer import MemTransformerLM
 
 class TransformerXL(SequenceModel):
 
+    # Default parameter values
+    attn_type = 0
+    clamp_len = -1
+    div_val = 1
+    d_embed = -1
+    d_head = 50
+    dropatt = 0.0
+    dropout = 0.0
+    ext_len = 0
+    mem_len = 0
+    n_head = 10
+    param_init = 'normal'
+    param_init_range = 0.1
+    param_init_std = 0.02
+    pre_lnorm = False
+    restart = False
+    same_length = False
+    tgt_len = 70
+    tied = True
+
+
     def __init__(self, **hyperparams):
         super().__init__(**hyperparams)
 
@@ -75,7 +96,7 @@ class TransformerXL(SequenceModel):
             m.dropatt.p = self.dropatt
 
 
-    def init_model(self, depth=10, width=500):
+    def init_model(self):
         n_layer = self.depth
         d_model = self.width
         d_inner = self.width * 2
@@ -108,32 +129,22 @@ class TransformerXL(SequenceModel):
         return model
 
 
-    def get_default_hyperparams(self):
-        return {
-            'attn_type': 0,
-            'clamp_len': -1,
-            'div_val': 1,
-            'd_embed': -1,
-            'd_head': 50,
-            'dropatt': 0.0,
-            'dropout': 0.0,
-            'ext_len': 0,
-            'mem_len': 0,
-            'n_head': 10,
-            'param_init': 'normal',
-            'param_init_range': 0.1,
-            'param_init_std': 0.02,
-            'pre_lnorm': False,
-            'restart': False,
-            'same_length': False,
-            'tgt_len': 70,
-            'tied': True,
-        }
-
-
-    def get_performance(self, X, Y):
+    def predict(self, batch, padding=True):
         """
-        Gets the loss and perplexity for a given X,Y.
+        Gets all one-step predictions for a batch of sentences.
+        For each context window output the next word.
+        seq[0:k] -> pred[k+1]
+        and so we output seq_len - k predictions
+        without padding
+        and seq_len predictions
+        with padding
+        """
+        raise NotImplementedError()
+
+
+    def train_step(self, batch):
+        """Performs an unsupervised train step for a given batch.
+        Returns loss on batch.
         """
         raise NotImplementedError()
 
