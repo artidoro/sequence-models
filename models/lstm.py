@@ -10,7 +10,11 @@ import config as c
 class LSTMModel(SequenceModel):
     # https://github.com/ceshine/examples/blob/master/word_language_model/main.py
 
+
     def init_model(self):
+        self.clip = True
+
+
         return RNNModel(
             'LSTM',
             self.vocab,
@@ -72,6 +76,9 @@ class LSTMModel(SequenceModel):
 
         # for p in self.model.parameters(): # TODO: What is this for?
         #     p.data.add_(-self.lr, p.grad.data)
+        if self.clip is not None:
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
+
 
         total_loss += loss.item()
 

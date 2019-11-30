@@ -145,12 +145,6 @@ def run_experiment(spec, experiment_directory):
                 loss = sequence_model.train_step(batch.text, batch.target, train_step=train_step, mems=mems)
                 losses.append(loss)
 
-                # Update the scheduler.
-                
-                
-                # Clip gradients.
-
-
                 if num_steps % 1000 == 0:
                     logger.info("Saving loss performance!")
                     np.save(J(experiment_directory, 'losses.npy'), losses)
@@ -168,12 +162,10 @@ def run_experiment(spec, experiment_directory):
                     logger.info("Train Perplexity: {}".format(train_perplexity[-1]))
                     logger.info("Average loss (past 10000): {}".format(np.mean(losses[-10:])))
 
-                
-
                 if train_step >= max_step:
                     break
 
-                #  
+        
 
             if train_step >= max_step:
                 logger.info('-' * 100)
