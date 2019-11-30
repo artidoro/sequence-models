@@ -64,7 +64,7 @@ class SequenceModel(ABC):
         """
         Updates the scheduler for the specified train_step
         """
-        
+
         # Step-wise learning rate annealing
         if self.scheduler_type in ['cosine', 'constant', 'dev_perf']:
             # linear warmup stage
@@ -84,7 +84,7 @@ class SequenceModel(ABC):
         Gets predictions for the next token of a batch of sequences (as a distribution over vocab tokens).
         
         Arguments:
-            inputs : a Tensor of shape (input_seq_length, batch_size)
+            inputs : a Tensor of shape (batch_size, input_seq_length)
 
         Returns:
             probs : a Tensor of shape (batch_size, vocab_size)

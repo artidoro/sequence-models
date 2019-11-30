@@ -166,7 +166,7 @@ class TransformerXL(SequenceModel):
         Gets predictions for the next token of a batch of sequences (as a distribution over vocab tokens).
         
         Arguments:
-            inputs : a Tensor of shape (input_seq_length, batch_size)
+            inputs : a Tensor of shape (batch_size, input_seq_length)
 
         Returns:
             probs : a Tensor of shape (batch_size, vocab_size)
@@ -186,10 +186,15 @@ class TransformerXL(SequenceModel):
 
         # Evaluation
         with torch.no_grad():
+            # Transpose data, since MemTransformerLM expects batches in each column
+            inputs = inputs.t()
+
+            # Get logits
             mems = tuple()
             ret = self.model.forward_generate(inputs, *mems)
             logits, mems = ret[0], ret[1:]
             logits = logits[-1] # Only keep logits from the last step
+
             probs = F.softmax(logits, dim=-1)
 
         # Switch back to the training mode
@@ -207,6 +212,9 @@ class TransformerXL(SequenceModel):
 
         # Zero out model gradients
         self.model.zero_grad()
+
+        # Transpose data, since MemTransformerLM expects batches in each column
+        inputs, targets = inputs.t(), targets.t()
 
         # Calculate loss
         ret = self.para_model(inputs, targets, *mems)
