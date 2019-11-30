@@ -36,6 +36,7 @@ def set_spec_default_values(spec):
             spec[key] = value
     return spec
 
+
 def evaluate_model(sequence_model, eval_iter, max_iterations, vocab):
     """
     Computes perplexity of a given model on an evaluation iterator.
@@ -52,6 +53,7 @@ def evaluate_model(sequence_model, eval_iter, max_iterations, vocab):
         percentage_correct = np.mean(
             np.argmax(predictions.detach().cpu().numpy(), axis=-1) ==  batch.target.cpu().numpy()
         )
+
         acc.append(percentage_correct)
 
         cross_ent = cross_entropy_loss(predictions.view(-1, vocab), batch.target.flatten())
@@ -130,11 +132,11 @@ def run_experiment(spec, experiment_directory):
     # Create dataset iterators
     train_iter, test_iter = torchtext_batch_iterators_split(
         ROOT_PATH, DATA_FILE, test_size=spec["test_size"],
-        batch_size=batch_size, bptt_len=bptt_len, device=device, batch_first=False, repeat=False)
+        batch_size=batch_size, bptt_len=bptt_len, device=device, batch_first=True, repeat=False)
 
     train_perplex_iter,  test_perplex_iter = torchtext_batch_iterators_split(
         ROOT_PATH, DATA_FILE, test_size=spec["test_size"],
-        batch_size=batch_size, bptt_len=bptt_len, device=device, batch_first=False, repeat=False)
+        batch_size=batch_size, bptt_len=bptt_len, device=device, batch_first=True, repeat=False)
 
     # Model
     model = sequence_model.get_model()
@@ -171,24 +173,26 @@ def run_experiment(spec, experiment_directory):
 
 
 
-                if num_steps % 100 == 0:
+                if num_steps % 1000 == 0:
                     progress.write("Saving loss performance!")
                     np.save(J(experiment_directory, 'losses.npy'), losses)
                     np.save(J(experiment_directory, 'test_performance.npy'), test_performance)
                     np.save(J(experiment_directory, 'train_performance.npy'), train_performance)
                     np.save(J(experiment_directory, 'step_to_performance.npy'), step_to_performance)
                 
-                if num_steps % 100 == 0:
+                if num_steps % 1000 == 0:
                     # Calculate perplexity
                     progress.write("-"* 100)
                     progress.write("Model Performance:")
+                    print("test")
                     test_performance.append(evaluate_model(sequence_model, test_perplex_iter, 10000, vocab))
+                    print("train")
                     train_performance.append(evaluate_model(sequence_model, train_perplex_iter, 10000, vocab))
                     step_to_performance.append(num_steps)
                     progress.write("Test (Perplex, Accuracy): {:.6f}, {:.6f}".format(*test_performance[-1]))
                     progress.write("Train (Perplex, Accuracy): {:.6f}, {:.6f}".format(*train_performance[-1]))
                     progress.write("Average loss (past 1000): {}".format(np.mean(losses[-1000:])))
-
+                    
                 if train_step >= max_step:
                     break
 

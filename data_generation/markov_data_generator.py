@@ -198,7 +198,7 @@ if __name__ == '__main__':
                     (next_hid_sequence, next_obs_sequence) = hmm_generator_short_long(lag, args.words_line,
                                         prev_hidden_state_seq, transition_matrix, emission_matrix)
 
-                    line = ' '.join(map(str, [ x for i,x in enumerate(next_obs_sequence)])) + '\n'
+                    line = ' '.join(map(str, [x for i,x in enumerate(next_obs_sequence)])) + '\n'
                     out_file.write(line)
                     prev_hidden_state_seq = next_hid_sequence
 
