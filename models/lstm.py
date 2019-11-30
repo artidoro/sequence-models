@@ -17,7 +17,6 @@ class LSTMModel(SequenceModel):
             self.depth)
 
     
-    @abstractmethod
     def predict(self, batch, padding=True):
         """
         Gets all one-step predictions for a batch of sentences.

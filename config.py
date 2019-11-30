@@ -6,7 +6,7 @@ EXPERIMENT_RUNNER_SHOULD_OVERWRITE = True
 CVISIBLE = 'CUDA_VISIBLE_DEVICES'
 
 HYPERPARAMETERS = OrderedDict({
-    'algorithms': [
+    'algorithm': [
         'lstm',
     ],
     'depth': [2],

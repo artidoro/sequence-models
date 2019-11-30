@@ -67,9 +67,9 @@ def run_experiment(spec, experiment_directory):
 
     # TODO: initialize dataset iterators (i.e. `train_iter`)
 
-    if model == 'transformer':
+    if spec["algorithm"] == 'transformer':
         sequence_model = TransformerXL(**spec)
-    elif model == 'lstm':
+    elif spec["algorithm"] == 'lstm':
         sequence_model = LSTMModel(**spec)
     # elif TODO: add CNNs
     model = sequence_model.get_model()
