@@ -68,4 +68,4 @@ if __name__ == '__main__':
     with open(args.specification_json, 'r') as f:
         spec = json.load(f)
 
-    run_experiment((spec, os.path.join(args.output_dir, spec["name"])))
+    run_experiment(spec, os.path.join(args.output_dir, spec["name"]))
