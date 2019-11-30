@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from models.sequence_model import SequenceModel
 
 
 class GatedCNNModel(nn.Module):

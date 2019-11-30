@@ -46,8 +46,8 @@ class LSTMModel(SequenceModel):
         total_loss = 0
 
         hidden = self.model.init_hidden(batch_size)
-        for batch, i in enumerate(range(0, seq_len, self.bptt)):
-            bp_seq_len = min(self.bptt, seq_len - i)
+        for batch, i in enumerate(range(0, seq_len, self.bptt_len)):
+            bp_seq_len = min(self.bptt_len, seq_len - i)
             inp = inputs[:, i:i+bp_seq_len]
             tar = targets[:, i:i+bp_seq_len]
             # Starting each batch, we detach the hidden state from how it was previously produced.
@@ -72,7 +72,7 @@ class LSTMModel(SequenceModel):
         if isinstance(h, torch.Tensor):
             return h.detach()
         else:
-            return tuple(repackage_hidden(v) for v in h)
+            return tuple(self.repackage_hidden(v) for v in h)
 
 
 

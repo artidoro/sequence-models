@@ -5,6 +5,8 @@ from collections import OrderedDict
 EXPERIMENT_RUNNER_SHOULD_OVERWRITE = True
 CVISIBLE = 'CUDA_VISIBLE_DEVICES'
 
+DATA_GENERATION_VERSION = 0
+
 
 
 #   - Vocabulary Size (between 5k and 10k)
@@ -26,9 +28,11 @@ HYPERPARAMETERS = OrderedDict({
     ],
     'depth': [2, 4, 8, 16], # TODO DETERMINE
     'width': [16, 32,128, 256, 512, 1024],
+    'sequence_dependence': [2,4,8,16],
     'vocab': [5000],
+    'hmm_hidden': [100],
     'batch_size': [32],
-    'sequence_dependence': [2,4,8,16]
+    'bttp_len': [32],
 })
 
 

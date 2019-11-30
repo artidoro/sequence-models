@@ -187,7 +187,7 @@ class TransformerXL(SequenceModel):
         
 
 
-    def train_step(self, inputs, targets, mems=mems, train_step=0):
+    def train_step(self, inputs, targets, mems=0, train_step=0):
         """
         Performs an unsupervised train step for a given batch.
         Returns loss on batch.
