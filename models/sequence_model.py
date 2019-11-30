@@ -1,14 +1,8 @@
-import numpy as np
 import torch
-import torch.nn as nn
 import torch.optim as optim
 import abc
 
 from abc import ABC, abstractmethod
-
-from models.mem_transformer import MemTransformerLM
-from utils.exp_utils import create_exp_dir
-from utils.data_parallel import BalancedDataParallel
 
 
 
@@ -39,8 +33,6 @@ def get_scheduler(self, optimizer, scheduler):
     elif scheduler == 'constant':
         pass
 
-
-
 class SequenceModel(ABC):
     """
     The abstract model class for training.
@@ -50,7 +42,6 @@ class SequenceModel(ABC):
         self.width = width
 
         self.model = self.init_model(depth, width, self.get_default_hyperparams())
-
 
     @abstractmethod
     def init_model(self, depth, width, **hyperparams):
@@ -82,3 +73,6 @@ class SequenceModel(ABC):
         Gets the loss and perplexity for a given X,Y.
         """
         raise NotImplementedError()
+
+    def get_model(self):
+        return self.model
