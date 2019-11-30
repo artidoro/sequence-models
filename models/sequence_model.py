@@ -76,13 +76,11 @@ class SequenceModel(ABC):
 
     
     @abstractmethod
-    def train_step(self, batch):
+    def train_step(self, inputs, targets):
         """Performs an unsupervised train step for a given batch.
         Returns loss on batch.
         """
         raise NotImplementedError()
-    
-
 
     def get_model(self):
         return self.model
