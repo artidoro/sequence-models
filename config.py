@@ -20,9 +20,11 @@ DEFAULT_VALUES_SPEC = {
     'device': 'cuda',
     'lr': 0.0002,
     'max_step': 100000,
+    'eta_min': 0.0001,
     'momentum': 0.0,
-    'scheduler': 'constant',
-    'warmup_step': 0,
+    'scheduler_type': 'constant',
+    'optimizer_type': 'sgd',
+    'warmup_step': 0
 }
 
 REQUIRED_ATTRIBUTES = set(
