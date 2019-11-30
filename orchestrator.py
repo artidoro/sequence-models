@@ -94,11 +94,13 @@ def launch_experiment_on_device(args):
         proc.start()
         logger.info("Waiting for experiment to finish....")
         proc.join()
+
+        logger.info("Experiment {} completed sucessfully".format(spec["name"]))
+
     finally:
         # Return the GPU toekn back to the queue.
         os.environ[c.CVISIBLE] = old_visible_devices
         available_devices.put(gpu_id)
-
 
 
 def main(specification_dir, out_dir, num_gpus, exps_per_gpu):
