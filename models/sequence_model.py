@@ -17,11 +17,9 @@ class SequenceModel(ABC):
         for key, value in hparams.items():
             setattr(self, key, value)
 
-            
         self.model = self.init_model()
         self.optimizer = self.init_optimizer()
         self.scheduler = self.init_scheduler()
-
 
     @abstractmethod
     def init_model(self):

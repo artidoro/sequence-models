@@ -29,5 +29,5 @@ DEFAULT_VALUES_SPEC = {
 
 REQUIRED_ATTRIBUTES = set(
     list(DEFAULT_VALUES_SPEC.keys()) +
-    list(HYPERPARAMETERS.keys.keys())
+    list(HYPERPARAMETERS.keys())
 )

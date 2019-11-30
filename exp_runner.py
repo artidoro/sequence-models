@@ -159,4 +159,3 @@ if __name__ == '__main__':
         spec = json.load(f)
 
     run_experiment(spec, os.path.join(args.output_dir, spec["name"]))
-    
