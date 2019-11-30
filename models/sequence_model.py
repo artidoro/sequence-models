@@ -34,7 +34,7 @@ def get_scheduler(self, optimizer, scheduler, eta_min=0,
         return optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
     elif scheduler == 'dev_perf':
         return optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, factor=self.decay_rate, patience=self.patience, min_lr=self.lr_min)
+            optimizer, factor=decay_rate, patience=patience, min_lr=lr_min)
     elif scheduler == 'constant':
         pass
 
