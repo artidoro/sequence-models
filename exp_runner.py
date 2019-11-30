@@ -83,7 +83,21 @@ def run_experiment(spec, experiment_directory):
 
 
 
+
     # Write training universal training code for every mode.
+    # Run for some number of training iterations.
+    #1. Get batch of paragraphs/documents  (batch, seq_len)
+    # TODO
+    #2. Train 
+    loss = sequence_model.train_step(batch_inputs, batch_targets)
+    #3. Compute perplexity
+    predictions = sequence_model.predict(batch_inputs)
+    # TODO: use this for perplexity
+    #4.s Update the scheduler.
+    # repeat.
+
+    
+
 
     # try:
     #     for epoch in itertools.count(start=1):
