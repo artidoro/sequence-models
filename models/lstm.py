@@ -36,7 +36,7 @@ class LSTMModel(SequenceModel):
         Returns loss on batch.
         """
         # TODO: Refactor this to the current setting.
-        # Make use of self.optimizer
+        # TODO: Make use of self.optimizer
         batch_size = inputs.shape[0]
         seq_len = inputs.shape[1]
         model.train()
@@ -51,7 +51,7 @@ class LSTMModel(SequenceModel):
             model.zero_grad()
             output, hidden = self.model(data, hidden)
             loss = nn.CrossEntropyLoss(output.view(-1, self.vocab), targets)
-            loss.backward()
+            self.optimizer.backward(loss)
 
             # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
