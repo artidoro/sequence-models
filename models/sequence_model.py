@@ -29,6 +29,7 @@ class SequenceModel(ABC):
         ### Each subclass should implement this on their own
         raise NotImplementedError()
 
+
     def init_optimizer(self):
         """Initializes the optimizer
         """
@@ -38,6 +39,7 @@ class SequenceModel(ABC):
             return optim.Adam(self.model.parameters(), lr=self.lr)
         elif self.optimizer_type.lower() == 'adagrad':
             return optim.Adagrad(self.model.parameters(), lr=self.lr)
+
 
     def init_scheduler(self):
         """Initializes the scheduler
@@ -56,29 +58,30 @@ class SequenceModel(ABC):
             return optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lr_lambda)
         elif self.scheduler_type == 'dev_perf':
             return optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=self.decay_rate, patience=self.patience, min_lr=self.lr_min)
-        elif self.scheduler_type == 'constant':
-            # TODO: implement the constant scheduler
-            return None
 
 
     @abstractmethod
-    def predict(self, batch, padding=True):
+    def predict(self, inputs):
         """
-        Gets all one-step predictions for a batch of sentences.
-        For each context window output the next word.
-        seq[0:k] -> pred[k+1]
-        and so we output seq_len - k predictions
-        without padding
-        and seq_len predictions
-        with padding
+        Gets predictions for the next token of a batch of sequences (as a distribution over vocab tokens).
+        
+        Arguments:
+            inputs : a Tensor of shape (input_seq_length, batch_size)
+
+        Returns:
+            probs : a Tensor of shape (batch_size, vocab_size)
         """
         raise NotImplementedError()
 
     
     @abstractmethod
-    def train_step(self, inputs, targets,):
-        """Performs an unsupervised train step for a given batch.
+    def train_step(self, inputs, targets, train_step=0, mems=tuple()):
+        """
+        Performs an unsupervised train step for a given batch.
         Returns loss on batch.
+
+        `train_step` is needed whenever the scheduler is non-constant
+        `mems` is only used for TransformerXL
         """
         raise NotImplementedError()
 
