@@ -4,9 +4,11 @@ import abc
 
 from abc import ABC, abstractmethod
 
+import config as c
 
 
-def get_optimizer(model, lr=0.0002, momentum=0.0):
+
+def get_optimizer(model, lr=c.DEFAULT_LEARNING_RATE, momentum=0.0):
     if optimizer.lower() == 'sgd':
         return optim.SGD(model.parameters(), lr=lr, momentum=momentum)
     elif optimizer.lower() == 'adam':

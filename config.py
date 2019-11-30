@@ -14,3 +14,6 @@ HYPERPARAMETERS = OrderedDict({
     'vocab': [5000],
     'sequence_dependence': [2]
 })
+
+
+DEFAULT_LEARNING_RATE = 0.0002
