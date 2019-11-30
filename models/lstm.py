@@ -34,7 +34,8 @@ class LSTMModel(SequenceModel):
 
         return output
         
-    def train_step(self, inputs, targets):
+        
+    def train_step(self, inputs, targets, train_step=0):
         """Performs an unsupervised train step for a given batch.
         Returns loss on batch.
         """
@@ -77,7 +78,11 @@ class LSTMModel(SequenceModel):
 
         total_loss += loss.item()
 
+        # Update scheduler
+        self.update_scheduler(train_step)
+
         return total_loss
+
     def repackage_hidden(self, h):
         """Wraps hidden states in new Tensors, to detach them from their history."""
         if isinstance(h, torch.Tensor):

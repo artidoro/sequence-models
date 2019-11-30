@@ -114,22 +114,7 @@ def run_experiment(spec, experiment_directory):
             model.train()
             mems = tuple()
             for train_step, batch in enumerate(train_iter):
-                #1. Get batch of paragraphs/documents  (batch, seq_len)
-                sequence_model.train_step(batch.text, batch.target)
-                # TODO: unify the problem of train_step and mems as argument in Transformer XL and the other models.
-
-                #2. Train
-                loss = sequence_model.train_step(batch.text, batch.target)
-
-                #3. Compute perplexity
-                predictions = sequence_model.predict(batch.text)
-                # TODO: use this for perplexity
-
-
-                #4. Update the scheduler.
-                # repeat.
-
-                print(loss)
+                loss = sequence_model.train_step(batch.text, batch.target, train_step=train_step, mems=mems)
 
                 if train_step >= max_step:
                     break
@@ -138,45 +123,22 @@ def run_experiment(spec, experiment_directory):
                 print('-' * 100)
                 print('End of training')
 
+            # TODO: calculate validation loss & perplexity
+            val_loss = None
+            perplexity = None
+
+            for val_batch in val_iter:
+                preds = sequence_model.predict(val_batch.text)
+            
+            if val_loss is None or val_loss < best_val_loss:
+                best_val_loss = val_loss
+                # TODO: save the best performing model so far(and its stats)
+
     except KeyboardInterrupt:
         print('-' * 100)
         print('Exiting from training early')
 
 
-    ############################################################
-    ### Example train_step() implementation <from transformerXL>
-    ############################################################
-    # def train_step(self, inputs, targets, mems=tuple(), train_step=0):
-    #     """
-    #     Performs an unsupervised train step for a given batch.
-    #     Returns loss on batch.
-    #     """
-
-    #     # Zero out model gradients
-    #     self.model.zero_grad()
-
-    #     # Calculate loss
-    #     ret = self.para_model(inputs, targets, *mems)
-    #     loss, mems = ret[0], ret[1:]
-    #     loss = loss.float().mean().type_as(loss)
-    #     if self.fp16:
-    #         self.optimizer.backward(loss)
-    #     else:
-    #         loss.backward()
-
-    #     # Gradient clipping
-    #     if self.clip is not None:
-    #         if self.fp16:
-    #             self.optimizer.clip_master_grads(self.clip)
-    #         else:
-    #             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
-
-    #     self.optimizer.step()
-
-    #     # Update scheduler
-    #     self.update_scheduler(train_step)
-
-    #     return loss
 
 if __name__ == '__main__':
     # One can also run the experiment directly:
