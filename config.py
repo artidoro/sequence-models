@@ -25,7 +25,7 @@ DEFAULT_VALUES_SPEC = {
     'momentum': 0.0,
     'scheduler_type': 'constant',
     'optimizer_type': 'sgd',
-    'warmup_step': 0.
+    'warmup_step': 0,
     'bptt_len': 28
 }
 
