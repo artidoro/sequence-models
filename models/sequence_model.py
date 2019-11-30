@@ -1,5 +1,8 @@
 import torch
 import torch.optim as optim
+import abc
+
+from abc import ABC, abstractmethod
 
 
 
@@ -30,33 +33,46 @@ def get_scheduler(self, optimizer, scheduler):
     elif scheduler == 'constant':
         pass
 
-
-
-class SequenceModel:
+class SequenceModel(ABC):
     """
-    A generic, abstract class representing a sequence model
+    The abstract model class for training.
     """
+    def __init__(self, depth, width):
+        self.depth = depth
+        self.width = width
 
-    def __init__(self, depth, width, hyperparams):
+        self.model = self.init_model(depth, width, self.get_default_hyperparams())
+
+    @abstractmethod
+    def init_model(self, depth, width, **hyperparams):
         """
-        Arguments:
-            depth (int)
-            width (int)
-            hyperparams (dict) <these become class variables, which can be accessed like `self.param`>
+        Returns a model of the specified depth and width.
         """
+        ### Each subclass should implement this on their own
+        raise NotImplementedError()
 
-        # Set hyperparameter values
-        for k, v in hyperparams.items():
-            setattr(self, k, v)
+    @abstractmethod
+    def get_default_hyperparams(self):
+        """
+        Gets the default hyperparameters for a model.
+        Returns:
+            A dictioanry of hyperparameters.
+        """
+        raise NotImplementedError()
 
-        self.model = self.init_model(depth, width)
+    @abstractmethod
+    def train_step(self, batch_X, batch_Y, learning_rate):
+        """
+        Takes a step of training with a batch of X's and a batch of labels.
+        """
+        raise NotImplementedError()
 
-
-    def init_model(self, depth, width):
-        pass # Each subclass should implement this on their own
-
+    @abstractmethod
+    def get_performance(self, X, Y):
+        """
+        Gets the loss and perplexity for a given X,Y.
+        """
+        raise NotImplementedError()
 
     def get_model(self):
         return self.model
-
-

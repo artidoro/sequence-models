@@ -7,12 +7,10 @@ CVISIBLE = 'CUDA_VISIBLE_DEVICES'
 
 HYPERPARAMETERS = OrderedDict({
     'algorithms': [
-        'cnn',
         'lstm',
-        'lstm_attention',
     ],
-    'depth': [2,4,8,16],
-    'width': [16,32,64,128,512,1024],
+    'depth': [2],
+    'width': [16],
     'vocab': [5000],
-    'sequence_dependence': [2,4,8,16,32]
+    'sequence_dependence': [2]
 })
