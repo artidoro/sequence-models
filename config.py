@@ -42,6 +42,7 @@ DEFAULT_VALUES_SPEC = {
     'max_step': 100000,
     'eta_min': 0.0,
     'embedding_dim': 256,
+    'hidden_dim': 256,
     'momentum': 0.0,
     'scheduler_type': 'constant',
     'optimizer_type': 'adam',
