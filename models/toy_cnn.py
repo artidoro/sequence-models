@@ -8,14 +8,15 @@ import functools
 import time
 import sys
 
-sys.path.append(os.path.dirname(os.getcwd()) + '/utils')
+# sys.path.append(os.path.dirname(os.getcwd()) + '/utils')
 
-import data_utils
+# import data_utils
 
 # haven't researched whether there's a good structure for sequence data cnn
 # don't know whether to add pooling layer or not and what is a good design
 # haven't tested with the optimizer settings yet
 
+'''
 # ---------------------------------------------------------------------------- #
 # helper functions
 # ---------------------------------------------------------------------------- #
@@ -45,7 +46,7 @@ def load_data(folder, fileprefix, input_len):
     for j,f in enumerate(files):
         print(j)
         # load one data file
-        one_seq = np.loadtxt(f, dtype=int)
+        one_seq = np.loadtxt(f, dtype=int).reshape(-1,)
 
         reformed_input = np.empty((len(one_seq) - input_len, 1, input_len), dtype=int)
         reformed_target = np.empty((len(one_seq) - input_len,), dtype=int)
@@ -57,11 +58,63 @@ def load_data(folder, fileprefix, input_len):
         acc_input.append(reformed_input)
         acc_target.append(reformed_target)
     return (acc_input, acc_target)
+'''
 
+# ---------------------------------------------------------------------------- #
+# Sequence model
+# ---------------------------------------------------------------------------- #
+class toyCNN(SequenceModel):
 
-out1 = get_output_dim(100 * 300, 5 * 300, 0, 1)
+    def __init__(self, **hyperparams):
+        super().__init__(**hyperparams)
 
-get_output_dim(out1, 2, 0, 2)
+    def init_model(self, input_len=100, vocab, embedding_dim, n_layers, conv_kernel_width=5, num_cov_filter=6,
+                   n_layers):
+        model = Net(vocab_size=len(vocab), input_len=100, conv_kernel_width=5,
+                num_conv_filter=6, pool_kernel_width=2, embedding_dim=embedding_dim, stride=1,
+                padding=0)
+        print(model)
+        if torch.cuda.is_available():
+            model.cuda()
+        self.model = model
+        return model
+
+    def to_var(self, x):
+        if torch.cuda.is_available():
+            x = x.cuda()
+        return Variable(x)
+
+    def predict(self, inputs, padding=True):
+
+        self.model.eval()
+
+        # Evaluation
+        with torch.no_grad():
+            X = self.to_var(inputs)
+            log_probs = self.model(X)
+            probs = torch.exp(log_probs)
+
+        # Switch back to the training mode
+        self.model.train()
+
+        return probs
+
+    def train_step(self, inputs, targets, train_step=0):
+
+        X = self.to_var(inputs)
+        Y = self.to_var(targets[:, -1])
+
+        pred = self.model(X)
+        loss = nn.NLLLoss()(pred, Y)
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        # Update scheduler
+        self.update_scheduler(train_step)
+
+        return loss
 
 # ---------------------------------------------------------------------------- #
 # Network structure
@@ -112,10 +165,12 @@ class Net(nn.Module):
             num_features *= s
         return num_features
 
+'''
 # load training data files into a matrix of num_training_instance x 1 x input_len
 # num_training_instance = num_sequences x (len(one_seq) - input_len)
 acc_input, acc_target = load_data(folder = "training_seq",
-                                  fileprefix = "hmm_3_hid_5_obs_100_lag_500_len_*",
+                                  # fileprefix = "hmm_3_hid_5_obs_100_lag_500_len_*",
+                                  fileprefix = "V1hmm_hidden_5_lag_2_vocab_10_seqlen_50000_wordsline_64*",
                                   input_len=100)
 
 data_input = functools.reduce(lambda x, y: np.concatenate((x, y), axis=0), acc_input)
@@ -135,9 +190,9 @@ testing_target = data_target[test_idx]
 # compute embedding of the training input
 # vocab = np.unique(training_input)
 # assume we know the vocabulary size
-vocab = range(5)
+vocab = range(10)
 word_to_ix = {word: i for i, word in enumerate(vocab)}
-embedding_dim = 3
+embedding_dim = 5
 
 # vocab = range(5000)
 # word_to_ix = {word: i for i, word in enumerate(vocab)}
@@ -186,3 +241,4 @@ print("finish")
 _, predicted = torch.max(outputs, 1)
 
 print("prediction accuracy = {:.3f}".format(sum(predicted == torch.from_numpy(testing_target)).item() / len(predicted)))
+'''
