@@ -60,15 +60,6 @@ class SequenceModel(ABC):
             # TODO: implement the constant scheduler
             return None
 
-
-    @abstractmethod
-    def get_performance(self, X, Y):
-        """
-        Gets the loss and perplexity for a given X,Y.
-        """
-        raise NotImplementedError()
-
-
     def get_model(self):
         return self.model
 

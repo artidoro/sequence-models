@@ -21,6 +21,7 @@ DEFAULT_VALUES_SPEC = {
     'lr': 0.0002,
     'max_step': 100000,
     'eta_min': 0.0001,
+    'embedding_dim': 256,
     'momentum': 0.0,
     'scheduler_type': 'constant',
     'optimizer_type': 'sgd',
