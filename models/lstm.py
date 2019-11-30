@@ -46,8 +46,10 @@ class LSTMModel(SequenceModel):
         total_loss = 0
 
         hidden = self.model.init_hidden(batch_size)
-        for batch, i in enumerate(range(0, seq_len - 1, self.bptt)):
-            data, targets = get_batch(train_data, i)
+        for batch, i in enumerate(range(0, seq_len, self.bptt)):
+            bp_seq_len = min(self.bptt, seq_len - i)
+            inp = inputs[:, i:i+bp_seq_len]
+            tar = targets[:, i:i+bp_seq_len]
             # Starting each batch, we detach the hidden state from how it was previously produced.
             # If we didn't, the model would try backpropagating all the way to start of the dataset.
             hidden = self.repackage_hidden(hidden)
@@ -56,10 +58,11 @@ class LSTMModel(SequenceModel):
             loss = nn.CrossEntropyLoss(output.view(-1, self.vocab), targets)
             self.optimizer.backward(loss)
 
+            # TODO: UPDATE THIS TO RESPECT THE OPTIMIZERS STUFF>
             # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
-            torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
-            for p in model.parameters():
-                p.data.add_(-lr, p.grad.data)
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
+            for p in self.model.parameters():
+                p.data.add_(-self.lr, p.grad.data)
 
             total_loss += loss.item()
             
@@ -72,11 +75,6 @@ class LSTMModel(SequenceModel):
             return tuple(repackage_hidden(v) for v in h)
 
 
-    def get_batch(self,source, i):
-        seq_len = min(self.bptt, len(source) - 1 - i)
-        data = source[i:i+seq_len]
-        target = source[i+1:i+1+seq_len].view(-1)
-        return data, target
 
 
 class RNNModel(nn.Module):
