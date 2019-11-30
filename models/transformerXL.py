@@ -23,7 +23,7 @@ class TransformerXL(SequenceModel):
     ext_len = 0
     fp16 = False
     mem_len = 0
-    multi_gpu = True
+    multi_gpu = False
     n_head = 10
     param_init = 'normal'
     param_init_range = 0.1
