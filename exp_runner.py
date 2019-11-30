@@ -58,7 +58,7 @@ def evaluate_model(sequence_model, eval_iter, max_iterations, vocab):
 
         cross_ent = cross_entropy_loss(predictions.view(-1, vocab), batch.target.flatten())
         perplexity = math.exp(cross_ent)
-        total_perplexity += cross_ent.item()
+        total_perplexity += perplexity
 
         if idx >= max_iterations:
             break
