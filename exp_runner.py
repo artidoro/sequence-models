@@ -7,9 +7,12 @@ import json
 import config as c
 import time
 import itertools
+import math
 
 import torch
 import torch.optim as optim
+from torch import nn
+from tqdm import tqdm
 
 from models.gated_cnn import GatedCNN
 from models.lstm import LSTMModel
@@ -31,7 +34,20 @@ def set_spec_default_values(spec):
             spec[key] = value
     return spec
 
+def evaluate_model(sequence_model, eval_iter, max_iterations):
+    cross_entropy_loss = nn.CrossEntropyLoss()
+    total_perplexity = 0
 
+    for idx, batch in tqdm(enumerate(eval_iter)):
+        predictions = sequence_model.predict(batch.text)
+        cross_ent = cross_entropy_loss(predictions.view(-1, predictions.shape[-1]), batch.target.flatten())
+        perp = math.exp(cross_ent.item())
+        total_perplexity += perp
+
+        if idx >= max_iterations:
+            break
+
+    return total_perplexity / max_iterations
 
 def run_experiment(spec, experiment_directory):
     """Runs an experiment based on the desired experiment specification.
@@ -73,11 +89,6 @@ def run_experiment(spec, experiment_directory):
     # Todo Run the actual experiment here <> @Ini
     # For now let's just print out the specification
 
-    # TODO: initialize dataset iterators (i.e. `train_iter`)
-    train_iter = [] ### REPLACE 
-    val_iter = [] ##### WITH
-    test_iter = [] #### ACTUAL ITERATORS
-
     if spec["algorithm"] == 'transformer':
         sequence_model = TransformerXL(**spec)
     elif spec["algorithm"] == 'lstm':
@@ -85,10 +96,6 @@ def run_experiment(spec, experiment_directory):
     elif spec["algorithm"] == 'cnn':
         sequence_model = GatedCNN(**spec)
 
-
-
-
-    # TODO: loop over trainig files/algorithm specification
     data_file = 'V{}hmm_hidden_{}_lag_{}_vocab_{}.txt'.format(
         c.DATA_GENERATION_VERSION, hmm_hidden, sequence_dependence, vocab)
 
@@ -97,6 +104,7 @@ def run_experiment(spec, experiment_directory):
     scheduler = sequence_model.get_scheduler()
 
     max_step = spec['max_step']
+    eval_steps = spec["eval_steps"]
     train_step = 0
     train_loss = 0
     best_val_loss = None
@@ -120,16 +128,16 @@ def run_experiment(spec, experiment_directory):
 
                 #2. Train
                 loss = sequence_model.train_step(batch.text, batch.target)
+                print(loss)
 
                 #3. Compute perplexity
-                predictions = sequence_model.predict(batch.text)
-                # TODO: use this for perplexity
+                if train_step % eval_steps == eval_steps - 1:
+                    avg_perp = evaluate_model(sequence_model, test_iter, eval_size)
+                    print(avg_perp)
 
 
                 #4. Update the scheduler.
                 # repeat.
-
-                print(loss)
 
                 if train_step >= max_step:
                     break

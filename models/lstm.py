@@ -1,6 +1,8 @@
 import torch
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 from models.sequence_model import SequenceModel
 
 import config as c
@@ -26,11 +28,14 @@ class LSTMModel(SequenceModel):
         and seq_len predictions
         with padding
         """
+        self.model.eval()
+
         batch_size = inputs.shape[0]
         self.model.eval()
         hidden = self.model.init_hidden(batch_size)
         output, hidden = self.model(inputs, hidden)
 
+        self.model.train()
         return output
 
     def train_step(self, inputs, targets):
