@@ -10,7 +10,7 @@ import time
 import torch
 import torch.optim as optim
 
-from model_experiment import get_optimizer, get_scheduler
+from models.sequence_model import get_optimizer, get_scheduler, SequenceModel
 
 from os.path import exists as E
 from os.path import join as J
@@ -27,6 +27,12 @@ def set_spec_default_values(spec):
         'scheduler': 'constant',
         'warmup_step': 0,
     }
+
+    for key, value in DEFAULT_VALUES.items():
+        if key not in spec:
+            spec[key] = value
+
+    return spec
 
 
 def get_optimizer(model, lr=0.0002, momentum=0.0):
@@ -72,6 +78,8 @@ def run_experiment(spec, experiment_directory):
         name = spec["name"]
         # Unpack additional arguments <here>
 
+        spec = set_spec_default_values(spec)
+
     except KeyError:
         logger.error("Invalid experiment specification: {}".format(spec))
         raise
@@ -90,7 +98,10 @@ def run_experiment(spec, experiment_directory):
     # Todo Run the actual experiment here <> @Ini
     # For now let's just print out the specification
 
-    # TODO: initialize model and dataset iterators
+    # TODO: initialize dataset iterators (i.e. `train_iter`)
+    # TODO: actually initialize `model`
+    sequence_model = SequenceModel(8, 64, {})
+    model = sequence_model.model
 
     # # # # # # #
     # Expects:
@@ -111,8 +122,6 @@ def run_experiment(spec, experiment_directory):
             model.train()
             mems = tuple()
             for batch, (data, target, seq_len) in enumerate(train_iter):
-                ### TODO: train_batch_loop(batch, data, target, *mems)
-
                 model.zero_grad()
 
                 ret = model.to(spec['device'])(data, target, *mems)
