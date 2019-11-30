@@ -150,7 +150,8 @@ def run_experiment(spec, experiment_directory):
 
                 # Update the scheduler.
                 
-                # Clip gradients
+                
+                # Clip gradients.
 
 
                 if num_steps % 1000 == 0:
