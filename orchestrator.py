@@ -12,6 +12,8 @@ import time
 from os.path import exists as E
 from os.path import join as J
 
+from utils.non_daemonic_pool import NonDaemonPool
+
 
 import config as c
 
@@ -57,7 +59,7 @@ def load_specifications(specification_dir):
     """
     assert E(specification_dir), "Specification directory {} does not exist".format(specification_dir)
 
-    specification_jsons = [J(specification_dir, f) for f in glob.glob(J(specification_dir, '*.json'))]
+    specification_jsons =  glob.glob(J(specification_dir, '*.json'))
 
     logger.info("Loading experiment specificaitons...")
     if not specification_jsons:
@@ -84,7 +86,7 @@ def launch_experiment_on_device(args):
 
     # Get an available GPU device 
     gpu_id = available_devices.get()
-    old_visible_devices = os.environ[c.VISIBLE]
+    old_visible_devices = os.environ.get(c.CVISIBLE, "")
     os.environ[c.CVISIBLE] = str(gpu_id)
 
     # Launch the experiment
@@ -92,7 +94,6 @@ def launch_experiment_on_device(args):
         logger.info("Running experiment {} on GPU {}".format(spec["name"], gpu_id))
         proc = multiprocessing.Process(target=run_experiment, args=run_exp_args)
         proc.start()
-        logger.info("Waiting for experiment to finish....")
         proc.join()
 
         logger.info("Experiment {} completed sucessfully".format(spec["name"]))
@@ -116,17 +117,21 @@ def main(specification_dir, out_dir, num_gpus, exps_per_gpu):
     
     if os.listdir(out_dir):
         logger.warning("The output directory {} is not empty. Are you sure you want to continue?".format(out_dir))
-        time.sleep(3)
+        # time.sleep(3)
 
     # 3. Create the workers with specific environment variables
     num_workers = num_gpus * exps_per_gpu
-    available_devices =  multiprocessing.Queue()
-    for g in range(num_gpus):
-        for _ in range(exps_per_gpu):
-            available_devices.put(g)
 
-    with multiprocessing.Pool(num_workers) as pool:
+    with NonDaemonPool(num_workers) as pool:
         logger.info("Created {} workers".format(num_workers))
+        
+        # Create the available device queue.
+        m = multiprocessing.Manager()
+        available_devices =  m.Queue()
+        for g in range(num_gpus):
+            for _ in range(exps_per_gpu):
+                available_devices.put(g)
+
 
         # 4. Create and distribute the workload
         workload = [
@@ -134,13 +139,13 @@ def main(specification_dir, out_dir, num_gpus, exps_per_gpu):
         ]
         logger.info("Running {} jobs accross {} GPUs".format(len(workload), num_gpus))
 
-        
         # 5. Launch the workers.
         logger.info("Launching the workers using `run_experiment`.")
-        pool.imap_unordered(
+        list(pool.imap_unordered(
             launch_experiment_on_device,
             workload
-        )
+        ))
+        # pool.join()
     
     logger.info("Success, all experiments completed!")
         

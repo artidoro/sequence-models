@@ -5,6 +5,7 @@ import os
 import argparse
 import json
 import config as c
+import time
 
 from os.path import exists as E
 from os.path import join as J
@@ -12,7 +13,7 @@ from os.path import join as J
 logger = logging.getLogger(__name__)
 
 
-def run_experiment(args):
+def run_experiment(spec, experiment_directory):
     """Runs an experiment based on the desired experiment specification.
     This process will record the desired response variables and write them to the experiment directory.
     
@@ -20,7 +21,7 @@ def run_experiment(args):
         spec (dict): The JSON object specifying the experiment to run.
         experiment_directory (str):  The directory path to which to write the response variables.
     """
-    spec, experiment_directory = args
+    # spec, experiment_directory = args
     
     # Unpack some of the specification information
     try:
@@ -44,7 +45,13 @@ def run_experiment(args):
     
     # Todo Run the actual experiment here <> @Ini
     # For now let's just print out the specification
+
+
+    # DO SOMETHING WITH THIS SPEC DUDE!
     print(spec)
+    time.sleep(10)
+    # THE GPU
+    print(os.environ.get(c.CVISIBLE, None))
     
     
 
