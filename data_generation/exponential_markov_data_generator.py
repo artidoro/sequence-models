@@ -8,10 +8,20 @@ from tqdm import tqdm
 # helper functions
 ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
 
+MAX_NONZERO_EMISSION_ENTRIES_PER_ROW = 2 # todo turn into command line argument
+# MAX_NONZERO_EMISSION_ENTRIES_PER_ROW = 1 # todo turn into command line argument
+
 # Generate an array of length num_states, and sum to 1
-def initialize_start_prob(num_states):
-    v = np.random.uniform(size=num_states)
-    normalized = v/np.sum(v)
+def initialize_start_prob(num_states, max_nonzero_entries=None):
+    # v = np.random.uniform(size=num_states)
+    v = np.random.exponential(size=num_states)
+    if max_nonzero_entries is None:
+        sparsified = v
+    else:
+        sparsification = np.hstack([np.ones(max_nonzero_entries),np.zeros(num_states-max_nonzero_entries)])
+        np.random.shuffle(sparsification)
+        sparsified = v*sparsification
+    normalized = sparsified/np.sum(sparsified)
     return normalized
 
 # Sample categorical RV
@@ -22,8 +32,8 @@ def get_state(prob):
 # Initialize a probability matrix each row has probabilities sum to one
 # row name is a "from" state, col name is a "to" state
 # result[i,j] is the probability of transition from state i to j
-def rand_init_prob_matrix(nrow, ncol):
-    return np.array([initialize_start_prob(ncol) for r in range(nrow)])
+def rand_init_prob_matrix(nrow, ncol, max_nonzero_entries_per_row=None):
+    return np.array([initialize_start_prob(ncol, max_nonzero_entries_per_row) for r in range(nrow)])
 
 # Initialize a transition matrix from `number_dep_states` which can take
 # `number_states_from` values to a new state which can take `number_states_to`
@@ -35,6 +45,19 @@ def rand_init_prob_matrix(nrow, ncol):
 # number_states_to: number of different values next state can take
 def init_trans_matrix(number_dep_states, number_states_from, number_states_to):
     matrix = rand_init_prob_matrix(number_states_from ** number_dep_states, number_states_to)
+    eye_on_first_from = (
+        np.eye(number_states_from, number_states_to)
+        [:,np.newaxis,:]
+        .repeat(number_states_from ** (number_dep_states-1), axis=1)
+        .reshape(matrix.shape)
+    )
+    eye_on_last_from = (
+        np.eye(number_states_from, number_states_to)
+        [np.newaxis,:,:]
+        .repeat(number_states_from ** (number_dep_states-1), axis=0)
+        .reshape(matrix.shape)
+    )
+    matrix = 0.2*matrix + 0.4*eye_on_first_from + 0.4*eye_on_last_from
     return matrix.reshape(np.append(np.full(number_dep_states, number_states_from), number_states_to))
 
 # Get the next hidden states from the previous state and a long-ago state
@@ -105,7 +128,7 @@ def hmm_generator_short_long(lag_size, output_length,
 ###############
 # Increase this as we change the generation protocol and push every time to github so that we can
 # track the changes in how the data is generated.
-GEN_VERSION = 0
+GEN_VERSION = 1
 ###############
 
 dep = 2
@@ -115,10 +138,8 @@ lag_max_default = 5
 mc_default = False
 hidden_size_default = 100
 sequence_len_default = 10000000
-words_per_line_default = 32
+words_per_line_default = 64
 dest_folder_default = 'generated_data'
-model_seed = 0
-data_seed = 0
 
 if __name__ == '__main__':
     description = ("Generate data with HMM or MC models with dependency on the previous step t-1 "
@@ -145,13 +166,10 @@ if __name__ == '__main__':
         help='the number of words per line. (default {})'.format(words_per_line_default))
     parser.add_argument('--dest_folder', default=dest_folder_default,
         help='the destination folder. (default {})'.format(dest_folder_default))
-    parser.add_argument('--model_seed', default=model_seed,
-        help='the seed used to initialize the model parameters. (default {})'.format(model_seed))
-    parser.add_argument('--data_seed', default=data_seed,
-        help='the seed used to initialize the data. (default {})'.format(data_seed))
     args = parser.parse_args()
 
-    np.random.seed(args.model_seed)
+    seed = 0
+    np.random.seed(seed)
 
     file_base = 'mc'
     if args.mc is False:
@@ -189,16 +207,14 @@ if __name__ == '__main__':
 
                 # Initialize the transition matrix.
                 transition_matrix = init_trans_matrix(dep, args.hidden_size, args.hidden_size)
-                emission_matrix = rand_init_prob_matrix(args.hidden_size, args.vocab_size)
-
-                start_prob = initialize_start_prob(num_states=args.hidden_size)
-                prev_hidden_state_seq = np.array([get_state(start_prob) for _ in range(lag)], dtype=int)
+                emission_matrix = rand_init_prob_matrix(args.hidden_size, args.vocab_size, MAX_NONZERO_EMISSION_ENTRIES_PER_ROW)
+                print(transition_matrix)
+                print(emission_matrix)
 
                 for i in tqdm(range(int(np.ceil(args.sequence_len/args.words_line)))):
                     (next_hid_sequence, next_obs_sequence) = hmm_generator_short_long(lag, args.words_line,
                                         prev_hidden_state_seq, transition_matrix, emission_matrix)
-
-                    line = ' '.join(map(str, [x for i,x in enumerate(next_obs_sequence)])) + '\n'
+                    line = ' '.join(map(str, next_obs_sequence)) + '\n'
                     out_file.write(line)
                     prev_hidden_state_seq = next_hid_sequence
 
