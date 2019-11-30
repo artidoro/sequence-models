@@ -26,9 +26,9 @@ def torchtext_batch_iterators_split(root_path, file_path, train_prefix='train', 
     """
     # Split the file into two files (train and validation). Size of the validation data is specified above.
     data_file_path = root_path + '/' + file_path
-    train_file_path = 'train_' + file_path
-    test_file_path = 'test_' + file_path
-    with open(data_file_path, 'r') as data_file, open(root_path + train_file_path, 'w') as train_file, open(root_path + test_file_path, 'w') as test_file:
+    train_file_path =  "train_"+ file_path
+    test_file_path =  "test_" + file_path
+    with open(data_file_path, 'r') as data_file, open(root_path + "/" +  train_file_path, 'w') as train_file, open(root_path + "/"+ test_file_path, 'w') as test_file:
         for idx, line in enumerate(data_file.readlines()):
             if idx < int(np.ceil(test_size/words_line)):
                 test_file.write(line)
@@ -36,7 +36,8 @@ def torchtext_batch_iterators_split(root_path, file_path, train_prefix='train', 
                 train_file.write(line)
 
     def tokenize(text):
-        return list(map(int, text.split(' ')))
+        x =  list(map(int, [x for x in text.split(' ') if x]))
+        return x
 
     text_field = data.Field(sequential=True, batch_first=batch_first, tokenize=tokenize, use_vocab=False)
 
@@ -45,6 +46,8 @@ def torchtext_batch_iterators_split(root_path, file_path, train_prefix='train', 
 
     train_iter, test_iter = data.BPTTIterator.splits((train, test),
         batch_size=batch_size, device=device, bptt_len=bptt_len, repeat=repeat)
+
+
 
     return train_iter, test_iter
 
@@ -87,5 +90,7 @@ def torchtext_batch_iterators(root_path, train_path, validation_path, test_path,
 
     train_iter, val_iter, test_iter = data.BPTTIterator.splits((train, validation, test),
         batch_size=batch_size, device=device, bptt_len=bptt_len, repeat=repeat)
+
+
 
     return train_iter, val_iter, test_iter

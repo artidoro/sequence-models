@@ -18,6 +18,7 @@ class SequenceModel(ABC):
             setattr(self, key, value)
 
         self.model = self.init_model()
+        self.model.to(hparams['device'])
         self.optimizer = self.init_optimizer()
         self.scheduler = self.init_scheduler()
 

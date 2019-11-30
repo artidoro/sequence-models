@@ -151,7 +151,7 @@ if __name__ == '__main__':
         help='the seed used to initialize the data. (default {})'.format(data_seed))
     args = parser.parse_args()
 
-    np.random.seed(args[model_seed])
+    np.random.seed(args.model_seed)
 
     file_base = 'mc'
     if args.mc is False:
@@ -161,8 +161,8 @@ if __name__ == '__main__':
     # Each should have length file len.
     for idx, lag in enumerate([2**exp for exp in range(args.lag_min, args.lag_max + 1)]):
 
-        file_name = '{}/V{}{}_lag_{}_vocab_{}_seqlen_{}_wordsline_{}.txt'.format(args.dest_folder, GEN_VERSION,
-            file_base, lag, args.vocab_size, args.sequence_len, args.words_line)
+        file_name = '{}/V{}{}_lag_{}_vocab_{}.txt'.format(args.dest_folder, GEN_VERSION,
+            file_base, lag, args.vocab_size)
         os.makedirs(os.path.dirname(file_name), exist_ok=True)
         with open(file_name, 'w') as out_file:
 
@@ -197,7 +197,8 @@ if __name__ == '__main__':
                 for i in tqdm(range(int(np.ceil(args.sequence_len/args.words_line)))):
                     (next_hid_sequence, next_obs_sequence) = hmm_generator_short_long(lag, args.words_line,
                                         prev_hidden_state_seq, transition_matrix, emission_matrix)
-                    line = ' '.join(map(str, next_obs_sequence)) + '\n'
+
+                    line = ' '.join(map(str, [ x for i,x in enumerate(next_obs_sequence)])) + '\n'
                     out_file.write(line)
                     prev_hidden_state_seq = next_hid_sequence
 

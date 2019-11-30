@@ -43,7 +43,7 @@ class LSTMModel(SequenceModel):
         return output
         
         
-    def train_step(self, inputs, targets, train_step=0):
+    def train_step(self, inputs, targets, train_step=0, mems=None):
 
         """Performs an unsupervised train step for a given batch.
         Returns loss on batch.
@@ -70,14 +70,9 @@ class LSTMModel(SequenceModel):
         loss.backward()
         self.optimizer.step()
 
-        # # TODO: UPDATE THIS TO RESPECT THE OPTIMIZERS STUFF>
-        # # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
-        # torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
-
-        # for p in self.model.parameters(): # TODO: What is this for?
-        #     p.data.add_(-self.lr, p.grad.data)
-        if self.clip is not None:
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
+    
+        # if self.clip is not None:
+        #     torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
 
 
         total_loss += loss.item()

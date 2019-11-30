@@ -20,6 +20,9 @@ from models.lstm import LSTMModel
 from models.sequence_model import SequenceModel
 from models.transformerXL import TransformerXL
 from data_generation.data_utils import torchtext_batch_iterators_split
+from models.utils.tqdm_logger import TqdmLogger
+
+import tqdm
 
 from os.path import exists as E
 from os.path import join as J
@@ -40,8 +43,11 @@ def evaluate_model(sequence_model, eval_iter, max_iterations):
     cross_entropy_loss = nn.CrossEntropyLoss()
     total_cross_ent = 0
 
-    for idx, batch in tqdm(enumerate(eval_iter)):
+    for idx, batch in tqdm.tqdm(enumerate(eval_iter)):
         predictions = sequence_model.predict(batch.text)
+        percentage_correct = (
+            predictions.view(-1, predictions.shape[-1]) ==  batch.target.flatten()
+        )
         cross_ent = cross_entropy_loss(predictions.view(-1, predictions.shape[-1]), batch.target.flatten())
         total_cross_ent += cross_ent.item()
 
@@ -79,12 +85,14 @@ def run_experiment(spec, experiment_directory):
         print("Invalid experiment specification: {}".format(spec))
         raise
 
-    logging.basicConfig(level=logging.DEBUG,
-                    filename=J(experiment_directory, 'out.log'),
-                    filemode='w')
+    logging.basicConfig(level=logging.DEBUG)
+                    # filename=J(experiment_directory, 'out.log'),
+                    # filemode='w')
     logger = logging.getLogger('exp_runner')
 
 
+    logger.info("Starting the experiment!")
+    logger.info(str(spec))
 
     # Create the directory
     if not os.path.exists(experiment_directory):
@@ -109,14 +117,16 @@ def run_experiment(spec, experiment_directory):
     DATA_FILE = 'V{}hmm_hidden_{}_lag_{}_vocab_{}.txt'.format(
         c.DATA_GENERATION_VERSION, hmm_hidden, sequence_dependence, vocab)
 
+    device = torch.device(device)
+
     # Create dataset iterators
     train_iter, test_iter = torchtext_batch_iterators_split(
         ROOT_PATH, DATA_FILE, test_size=spec["test_size"],
         batch_size=batch_size, bptt_len=bptt_len, device=device, batch_first=False, repeat=False)
 
-    train_perplex_iter, _, test_perplex_iter = torchtext_batch_iterators(
-        'generated_data', train_path, val_path, test_path,
-        batch_size=batch_size, bptt_len=bttp_len, device=device, batch_first=False, repeat=True)
+    train_perplex_iter,  test_perplex_iter = torchtext_batch_iterators_split(
+        ROOT_PATH, DATA_FILE, test_size=spec["test_size"],
+        batch_size=batch_size, bptt_len=bptt_len, device=device, batch_first=False, repeat=False)
 
     # Model
     model = sequence_model.get_model()
@@ -136,31 +146,39 @@ def run_experiment(spec, experiment_directory):
 
     num_steps = 0
     # Training Loop
+
+    tqdm_out = TqdmLogger(logger,level=logging.INFO)
+    progress = tqdm.tqdm(total=max_step,)
+
     try:
         for epoch in itertools.count(start=1):
             model.train()
             mems = tuple()
             for train_step, batch in enumerate(train_iter):
                 num_steps +=1
+                progress.update()
                 loss = sequence_model.train_step(batch.text, batch.target, train_step=train_step, mems=mems)
                 losses.append(loss)
+                progress.set_description("Loss {:.4f}".format(loss))
+
+
 
                 if num_steps % 1000 == 0:
-                    logger.info("Saving loss performance!")
+                    progress.write("Saving loss performance!")
                     np.save(J(experiment_directory, 'losses.npy'), losses)
                     np.save(J(experiment_directory, 'test_perplexity.npy'), test_perplexity)
                     np.save(J(experiment_directory, 'train_perplexity.npy'), train_perplexity)
                 
-                if num_steps % 10000 == 0:
+                if num_steps % 1000 == 0:
                     # Calculate perplexity
-                    logger.info("-"* 100)
-                    logger.info("Model Performance:")
+                    progress.write("-"* 100)
+                    progress.write("Model Performance:")
                     test_perplexity.append(evaluate_model(sequence_model, test_perplex_iter, 10000))
                     train_perplexity.append(evaluate_model(sequence_model, train_perplex_iter, 10000))
                     step_to_perplexity.append(num_steps)
-                    logger.info("Test Perplexity: {}".format(test_perplexity[-1]))
-                    logger.info("Train Perplexity: {}".format(train_perplexity[-1]))
-                    logger.info("Average loss (past 10000): {}".format(np.mean(losses[-10:])))
+                    progress.write("Test Perplexity: {}".format(test_perplexity[-1]))
+                    progress.write("Train Perplexity: {}".format(train_perplexity[-1]))
+                    progress.write("Average loss (past 10000): {}".format(np.mean(losses[-1000:])))
 
                 if train_step >= max_step:
                     break
@@ -168,8 +186,8 @@ def run_experiment(spec, experiment_directory):
         
 
             if train_step >= max_step:
-                logger.info('-' * 100)
-                logger.info('End of training')
+                progress.write('-' * 100)
+                progress.write('End of training')
                 break
 
             # if val_loss is None or val_loss < best_val_loss:
@@ -179,6 +197,7 @@ def run_experiment(spec, experiment_directory):
     except KeyboardInterrupt:
         logger.info('-' * 100)
         logger.info('Exiting from training early')
+        raise
 
 
 

@@ -41,6 +41,8 @@ class GatedCNNModel(nn.Module):
         self.c = nn.ParameterList([nn.Parameter(torch.randn(1, out_chs, 1, 1)) for _ in range(n_layers)])
 
         self.fc = nn.Linear(out_chs * seq_len, ans_size)
+        self.seq_len = seq_len
+        self.out_chs = out_chs
 
 
     def forward(self, x):
@@ -71,7 +73,7 @@ class GatedCNNModel(nn.Module):
                 h += res_input
                 res_input = h
 
-        h = h.view(bs, -1) # (bs, Cout*seq_len)
+        h = h.view(bs, self.out_chs*seq_len) # (bs, Cout*seq_len)
         out = self.fc(h) # (bs, ans_size)
         out = F.log_softmax(out, dim=-1)
 
@@ -99,6 +101,7 @@ class GatedCNN(SequenceModel):
         self.out_chs = self.width
         self.vocab_size = self.vocab
         self.kernel = (self.kernel[0], self.embedding_dim)
+        self.seq_len = self.bttp_len
 
         model = GatedCNNModel(self.seq_len, self.vocab_size, self.embedding_dim, self.n_layers, self.kernel, self.out_chs, self.res_block_count, self.vocab_size)
         if torch.cuda.is_available():
@@ -139,7 +142,7 @@ class GatedCNN(SequenceModel):
         return probs
 
     
-    def train_step(self, inputs, targets, train_step=0):
+    def train_step(self, inputs, targets, train_step=0, mems=None):
         """
         Performs an unsupervised train step for a given batch.
         Returns loss on batch.
