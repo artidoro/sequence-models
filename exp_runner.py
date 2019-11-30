@@ -35,19 +35,21 @@ def set_spec_default_values(spec):
     return spec
 
 def evaluate_model(sequence_model, eval_iter, max_iterations):
+    """
+    Computes perplexity of a given model on an evaluation iterator.
+    """
     cross_entropy_loss = nn.CrossEntropyLoss()
-    total_perplexity = 0
+    total_cross_ent = 0
 
     for idx, batch in tqdm(enumerate(eval_iter)):
         predictions = sequence_model.predict(batch.text)
         cross_ent = cross_entropy_loss(predictions.view(-1, predictions.shape[-1]), batch.target.flatten())
-        perp = math.exp(cross_ent.item())
-        total_perplexity += perp
+        total_cross_ent += cross_ent.item()
 
         if idx >= max_iterations:
             break
 
-    return total_perplexity / max_iterations
+    return math.exp(total_cross_ent / max_iterations)
 
 def run_experiment(spec, experiment_directory):
     """Runs an experiment based on the desired experiment specification.
@@ -61,15 +63,18 @@ def run_experiment(spec, experiment_directory):
     
     # Unpack some of the specification information
     try:
-        name = spec["name"]
-        hmm_hidden = spec["hmm_hidden"]
-        vocab = spec["vocab"]
-        batch_size = spec["batch_size"]
-        sequence_dependence = spec["sequence_dependence"]
-        bttp_len = spec["bttp_len"]
-        # Unpack additional arguments <here>
-
         spec = set_spec_default_values(spec)
+
+        algorithm = spec["algorithm"]
+        batch_size = spec['batch_size']
+        bttp_len = spec['bttp_len']
+        device = spec['device']
+        hmm_hidden = spec['hmm_hidden']
+        max_step = spec['max_step']
+        name = spec['name']
+        sequence_dependence = spec['sequence_dependence']
+        vocab = spec['vocab']
+        # Unpack additional arguments <here>
 
     except KeyError:
         logger.error("Invalid experiment specification: {}".format(spec))
@@ -86,19 +91,28 @@ def run_experiment(spec, experiment_directory):
     with open(J(experiment_directory, 'params.json'), 'w') as f:
         json.dump(spec, f)
 
-    # Todo Run the actual experiment here <> @Ini
-    # For now let's just print out the specification
-
-    if spec["algorithm"] == 'transformer':
+    # Choose sequence model type
+    if algorithm == 'transformer':
         sequence_model = TransformerXL(**spec)
-    elif spec["algorithm"] == 'lstm':
+    elif algorithm == 'lstm':
         sequence_model = LSTMModel(**spec)
-    elif spec["algorithm"] == 'cnn':
+    elif algorithm == 'cnn':
         sequence_model = GatedCNN(**spec)
 
-    data_file = 'V{}hmm_hidden_{}_lag_{}_vocab_{}.txt'.format(
+    # TODO: loop over trainig files/algorithm specification
+    ROOT_PATH = 'generated_data'
+    DATA_FILE = 'V{}hmm_hidden_{}_lag_{}_vocab_{}.txt'.format(
         c.DATA_GENERATION_VERSION, hmm_hidden, sequence_dependence, vocab)
 
+    # Create dataset iterators
+    train_path = os.path.join('train', DATA_FILE)
+    val_path = os.path.join('validation', DATA_FILE)
+    test_path = os.path.join('test', DATA_FILE)
+    train_iter, val_iter, test_iter = torchtext_batch_iterators(
+        'generated_data', train_path, val_path, test_path,
+        batch_size=batch_size, bptt_len=bttp_len, device=device, batch_first=False, repeat=True)
+
+    # Model
     model = sequence_model.get_model()
     optimizer = sequence_model.get_optimizer()
     scheduler = sequence_model.get_scheduler()
@@ -109,35 +123,13 @@ def run_experiment(spec, experiment_directory):
     train_loss = 0
     best_val_loss = None
 
-    # Write training universal training code for every mode.
-    train_iter, validation_iter, test_iter = torchtext_batch_iterators('generated_data',
-        'train/' + data_file, 'validation/' + data_file, 'test/' + data_file,
-        batch_size=batch_size, bptt_len=bttp_len, device=None, batch_first=False, repeat=True)
-        # TODO: pass the device to this call so that the data is already on the GPU.
-
     # Training Loop
     try:
-        # TODO: somewhere in here compute perplexity or validation loss or whatever, and save the best performing models with their corresponding stats
         for epoch in itertools.count(start=1):
             model.train()
             mems = tuple()
             for train_step, batch in enumerate(train_iter):
-                #1. Get batch of paragraphs/documents  (batch, seq_len)
-                sequence_model.train_step(batch.text, batch.target)
-                # TODO: unify the problem of train_step and mems as argument in Transformer XL and the other models.
-
-                #2. Train
-                loss = sequence_model.train_step(batch.text, batch.target)
-                print(loss)
-
-                #3. Compute perplexity
-                if train_step % eval_steps == eval_steps - 1:
-                    avg_perp = evaluate_model(sequence_model, test_iter, eval_size)
-                    print(avg_perp)
-
-
-                #4. Update the scheduler.
-                # repeat.
+                loss = sequence_model.train_step(batch.text, batch.target, train_step=train_step, mems=mems)
 
                 if train_step >= max_step:
                     break
@@ -146,45 +138,22 @@ def run_experiment(spec, experiment_directory):
                 print('-' * 100)
                 print('End of training')
 
+            # TODO: calculate validation loss & perplexity
+            val_loss = None
+            perplexity = None
+
+            for val_batch in val_iter:
+                preds = sequence_model.predict(val_batch.text)
+
+            if val_loss is None or val_loss < best_val_loss:
+                best_val_loss = val_loss
+                # TODO: save the best performing model so far(and its stats)
+
     except KeyboardInterrupt:
         print('-' * 100)
         print('Exiting from training early')
 
 
-    ############################################################
-    ### Example train_step() implementation <from transformerXL>
-    ############################################################
-    # def train_step(self, inputs, targets, mems=tuple(), train_step=0):
-    #     """
-    #     Performs an unsupervised train step for a given batch.
-    #     Returns loss on batch.
-    #     """
-
-    #     # Zero out model gradients
-    #     self.model.zero_grad()
-
-    #     # Calculate loss
-    #     ret = self.para_model(inputs, targets, *mems)
-    #     loss, mems = ret[0], ret[1:]
-    #     loss = loss.float().mean().type_as(loss)
-    #     if self.fp16:
-    #         self.optimizer.backward(loss)
-    #     else:
-    #         loss.backward()
-
-    #     # Gradient clipping
-    #     if self.clip is not None:
-    #         if self.fp16:
-    #             self.optimizer.clip_master_grads(self.clip)
-    #         else:
-    #             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
-
-    #     self.optimizer.step()
-
-    #     # Update scheduler
-    #     self.update_scheduler(train_step)
-
-    #     return loss
 
 if __name__ == '__main__':
     # One can also run the experiment directly:
@@ -197,5 +166,3 @@ if __name__ == '__main__':
         spec = json.load(f)
 
     run_experiment(spec, os.path.join(args.output_dir, spec["name"]))
-
-    
