@@ -8,27 +8,7 @@ from models.mem_transformer import MemTransformerLM
 
 class TransformerXL(SequenceModel):
 
-    attn_type = 0
-    clamp_len = -1
-    div_val = 1
-    d_embed = -1
-    d_head = 50
-    dropatt = 0.0
-    dropout = 0.0
-    ext_len = 0
-    mem_len = 0
-    n_head = 10
-    param_init = 'normal'
-    param_init_range = 0.1
-    param_init_std = 0.02
-    pre_lnorm = False
-    restart = False
-    same_length = False
-    tgt_len = 70
-    tied = True
-
-
-    def __init__(self, depth, width, hyperparams):
+    def __init__(self, depth, width):
         super().__init__(depth, width, hyperparams)
 
 
@@ -96,28 +76,28 @@ class TransformerXL(SequenceModel):
 
 
     def init_model(self, depth, width):
-        self.n_layer = depth
-        self.d_model = width
-        self.d_inner = width * 2
+        n_layer = depth
+        d_model = width
+        d_inner = width * 2
 
-        if self.d_embed < 0:
-            self.d_embed = self.d_model
+        if d_embed < 0:
+            d_embed = d_model
 
-        if self.restart:
-            with open(os.path.join(self.restart_dir, 'model.pt'), 'rb') as f:
+        if restart:
+            with open(os.path.join(restart_dir, 'model.pt'), 'rb') as f:
                 model = torch.load(f)
-            if not self.fp16:
+            if not fp16:
                 model = model.float()
             model.apply(self.update_dropout)
             model.apply(self.update_dropatt)
         else:
-            model = MemTransformerLM(self.vocab_size, self.n_layer, self.n_head, self.d_model,
-                self.d_head, self.d_inner, self.dropout, self.dropatt,
-                tie_weight=self.tied, d_embed=self.d_embed, div_val=self.div_val, 
-                tie_projs=[False], pre_lnorm=self.pre_lnorm, tgt_len=self.tgt_len,
-                ext_len=self.ext_len, mem_len=self.mem_len, cutoffs=[],
-                same_length=self.same_length, attn_type=self.attn_type,
-                clamp_len=self.clamp_len, sample_softmax=-1)
+            model = MemTransformerLM(vocab_size, n_layer, n_head, d_model,
+                d_head, d_inner, dropout, dropatt,
+                tie_weight=tied, d_embed=d_embed, div_val=div_val, 
+                tie_projs=[False], pre_lnorm=pre_lnorm, tgt_len=tgt_len,
+                ext_len=ext_len, mem_len=mem_len, cutoffs=[],
+                same_length=same_length, attn_type=attn_type,
+                clamp_len=clamp_len, sample_softmax=-1)
             model.apply(self.weights_init)
             model.word_emb.apply(self.weights_init) # ensure embedding init is not overridden by out_layer in case of weight sharing
 
@@ -126,5 +106,40 @@ class TransformerXL(SequenceModel):
         self.n_nonemb_param = sum([p.nelement() for p in model.layers.parameters()])
 
         return model
+
+
+    def get_default_hyperparams(self):
+        return {
+            'attn_type': 0,
+            'clamp_len': -1,
+            'div_val': 1,
+            'd_embed': -1,
+            'd_head': 50,
+            'dropatt': 0.0,
+            'dropout': 0.0,
+            'ext_len': 0,
+            'mem_len': 0,
+            'n_head': 10,
+            'param_init': 'normal',
+            'param_init_range': 0.1,
+            'param_init_std': 0.02,
+            'pre_lnorm': False,
+            'restart': False,
+            'same_length': False,
+            'tgt_len': 70,
+            'tied': True,
+        }
+
+
+    def train_step():
+        raise NotImplementedError()
+
+
+    def get_performance():
+        raise NotImplementedError()
+
+
+
+
 
 
