@@ -113,7 +113,7 @@ class TransformerXL(SequenceModel):
             self.d_embed = d_model
 
         # Mixed-floating point precision (if fp16 is enabled, storage will be with half-precision)
-        if self.fp16 and self.device != 'cuda':
+        if self.fp16 and 'cuda' not in self.device:
             print('WARNING: fp16 requires cuda, ignoring fp16 option')
             self.fp16 = False
         elif self.fp16:
