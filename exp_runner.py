@@ -8,6 +8,7 @@ import config as c
 import time
 import itertools
 import math
+import numpy as np
 
 import torch
 import torch.optim as optim
@@ -24,8 +25,6 @@ from os.path import exists as E
 from os.path import join as J
 
 import config as c
-
-logger = logging.getLogger(__name__)
 
 
 def set_spec_default_values(spec):
@@ -77,8 +76,14 @@ def run_experiment(spec, experiment_directory):
         # Unpack additional arguments <here>
 
     except KeyError:
-        logger.error("Invalid experiment specification: {}".format(spec))
+        print("Invalid experiment specification: {}".format(spec))
         raise
+
+    logging.basicConfig(level=logging.DEBUG,
+                    filename=J(experiment_directory, 'out.log'),
+                    filemode='w')
+    logger = logging.getLogger('exp_runner')
+
 
 
     # Create the directory
@@ -112,6 +117,10 @@ def run_experiment(spec, experiment_directory):
         'generated_data', train_path, val_path, test_path,
         batch_size=batch_size, bptt_len=bttp_len, device=device, batch_first=False, repeat=True)
 
+    train_perplex_iter, _, test_perplex_iter = torchtext_batch_iterators(
+        'generated_data', train_path, val_path, test_path,
+        batch_size=batch_size, bptt_len=bttp_len, device=device, batch_first=False, repeat=True)
+
     # Model
     model = sequence_model.get_model()
     optimizer = sequence_model.get_optimizer()
@@ -123,35 +132,63 @@ def run_experiment(spec, experiment_directory):
     train_loss = 0
     best_val_loss = None
 
+    losses = []
+    test_perplexity = []
+    train_perplexity = []
+    step_to_perplexity = []
+
+    num_steps = 0
     # Training Loop
     try:
         for epoch in itertools.count(start=1):
             model.train()
             mems = tuple()
             for train_step, batch in enumerate(train_iter):
+                num_steps +=1
                 loss = sequence_model.train_step(batch.text, batch.target, train_step=train_step, mems=mems)
+                losses.append(loss)
+
+                # Update the scheduler.
+                
+                # Clip gradients
+
+
+                if num_steps % 1000 == 0:
+                    logger.info("Saving loss performance!")
+                    np.save(J(experiment_directory, 'losses.npy'), losses)
+                    np.save(J(experiment_directory, 'test_perplexity.npy'), test_perplexity)
+                    np.save(J(experiment_directory, 'train_perplexity.npy'), train_perplexity)
+                
+                if num_steps % 10000 == 0:
+                    # Calculate perplexity
+                    logger.info("-"* 100)
+                    logger.info("Model Performance:")
+                    test_perplexity.append(evaluate_model(sequence_model, test_perplex_iter, 10000))
+                    train_perplexity.append(evaluate_model(sequence_model, train_perplex_iter, 10000))
+                    step_to_perplexity.append(num_steps)
+                    logger.info("Test Perplexity: {}".format(test_perplexity[-1]))
+                    logger.info("Train Perplexity: {}".format(train_perplexity[-1]))
+                    logger.info("Average loss (past 10000): {}".format(np.mean(losses[-10:])))
+
+                
 
                 if train_step >= max_step:
                     break
 
+                #  
+
             if train_step >= max_step:
-                print('-' * 100)
-                print('End of training')
+                logger.info('-' * 100)
+                logger.info('End of training')
+                break
 
-            # TODO: calculate validation loss & perplexity
-            val_loss = None
-            perplexity = None
-
-            for val_batch in val_iter:
-                preds = sequence_model.predict(val_batch.text)
-
-            if val_loss is None or val_loss < best_val_loss:
-                best_val_loss = val_loss
-                # TODO: save the best performing model so far(and its stats)
+            # if val_loss is None or val_loss < best_val_loss:
+            #     best_val_loss = val_loss
+            #     # TODO: save the best performing model so far(and its stats)
 
     except KeyboardInterrupt:
-        print('-' * 100)
-        print('Exiting from training early')
+        logger.info('-' * 100)
+        logger.info('Exiting from training early')
 
 
 
