@@ -12,6 +12,7 @@ import torch.optim as optim
 
 from models.sequence_model import SequenceModel
 from models.transformerXL import TransformerXL
+from models.lstm import LSTMModel
 
 from os.path import exists as E
 from os.path import join as J
@@ -66,22 +67,21 @@ def run_experiment(spec, experiment_directory):
 
     # TODO: initialize dataset iterators (i.e. `train_iter`)
     # TODO: genericize the initialization of `model`
-    sequence_model = TransformerXL(**spec)
+    if model == 'transformer':
+        sequence_model = TransformerXL(**spec)
+    elif model == 'lstm':
+        sequence_model = LSTMModel(**spec)
+    # elif TODO: add CNNs
     model = sequence_model.get_model()
     optimizer = sequence_model.get_optimizer()
     scheduler = sequence_model.get_scheduler()
-
-    # # # # # # #
-    # Expects:
-    #   model
-    #   spec['optimizer'] in ['sgd', 'adam', 'adagrad']
-    #   spec['lr'] (float)
-    #   Optional: spec['momentum'] (float)
 
     max_step = spec['max_step']
     train_step = 0
     train_loss = 0
     best_val_loss = None
+
+
 
     # Write training universal training code for every mode.
 
