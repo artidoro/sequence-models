@@ -75,7 +75,7 @@ class TransformerXL(SequenceModel):
             m.dropatt.p = self.dropatt
 
 
-    def init_model(self, depth, width):
+    def init_model(self, depth=10, width=500):
         n_layer = self.depth
         d_model = self.width
         d_inner = self.width * 2
