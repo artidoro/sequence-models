@@ -78,17 +78,27 @@ class GatedCNNModel(nn.Module):
 
 class GatedCNN(SequenceModel):
 
+    # Default parameter values
+    vocab_size = 2000
+    seq_len = 21
+    embd_size = 200
+    n_layers = 10
+    kernel = (5, embd_size)
+    out_chs = 64
+    res_block_count = 5
+    batch_size = 64
+
+
     def __init__(self, **hyperparams):
         super().__init__(**hyperparams)
 
 
     def init_model(self, depth=10, width=500):
-        n_layers = self.depth
-        out_chs = self.width
-
+        self.n_layers = self.depth
+        self.out_chs = self.width
         self.kernel[1] = self.embd_size
 
-        model = GatedCNN(self.seq_len, self.vocab_size, self.embd_size, n_layers, self.kernel, out_chs, self.res_block_count, self.vocab_size)
+        model = GatedCNN(self.seq_len, self.vocab_size, self.embd_size, self.n_layers, self.kernel, self.out_chs, self.res_block_count, self.vocab_size)
         self.model = model
         return model
 
