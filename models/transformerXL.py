@@ -97,7 +97,7 @@ class TransformerXL(SequenceModel):
 
 
     def init_model(self):
-        n_layer = self.depth
+        n_layer = (self.depth - 1) / 2 # depth = n_layer * (multi-head + ffn) + linear-softmax
         d_model = self.width
         d_inner = self.width * 2
 

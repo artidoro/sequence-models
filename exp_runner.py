@@ -10,9 +10,10 @@ import time
 import torch
 import torch.optim as optim
 
+from models.gated_cnn import GatedCNN
+from models.lstm import LSTMModel
 from models.sequence_model import SequenceModel
 from models.transformerXL import TransformerXL
-from models.lstm import LSTMModel
 
 from os.path import exists as E
 from os.path import join as J
@@ -71,7 +72,10 @@ def run_experiment(spec, experiment_directory):
         sequence_model = TransformerXL(**spec)
     elif spec["algorithm"] == 'lstm':
         sequence_model = LSTMModel(**spec)
-    # elif TODO: add CNNs
+    elif spec["algorithm"] == 'cnn':
+        sequence_model = GatedCNN(**spec)
+    # elif TODO: add RNNs?
+
     model = sequence_model.get_model()
     optimizer = sequence_model.get_optimizer()
     scheduler = sequence_model.get_scheduler()
