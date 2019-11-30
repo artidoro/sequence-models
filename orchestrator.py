@@ -4,8 +4,26 @@ import json
 import argparse
 import logging
 import coloredlogs
-import multiprocess
+import multiprocessing
+import glob
 import os
+import time
+
+from os.path import exists as E
+from os.path import join as J
+
+
+import config as c
+
+
+# Set up logging components
+
+coloredlogs.install(level=logging.DEBUG)
+
+logger = logging.getLogger(__name__)
+
+from exp_runner import run_experiment
+
 
 
 def parse_args():
@@ -28,6 +46,59 @@ def parse_args():
     return parser.parse_args()
 
 
+def load_specifications(specification_dir):
+    """Loads experiment specifications from a specified directory.
+    
+    Args:
+        specification_dir (str): The specified directory containing experiment specifications.
+    
+    Returns:
+        list(dict): A list of experiment specification JSONs.
+    """
+    assert E(specification_dir), "Specification directory {} does not exist".format(specification_dir)
+
+    specification_jsons = [J(specification_dir, f) for f in glob.glob(J(specification_dir, '*.json'))]
+
+    logger.info("Loading experiment specificaitons...")
+    if not specification_jsons:
+        logger.warning("Could not find any experiment specifications in {}".format(specification_dir))
+
+    specs = []
+    for spec_path in specification_jsons:
+        with open(spec_path, 'r') as f:
+            specs.append(json.load(f))
+    logger.info("Found {} experiment specifications".format(len(specs)))
+
+    return specs
+
+
+def launch_experiment_on_device(args):
+    """Launches an experiment on a particular device
+    
+    Args:
+        args (tuple): The arguments for the experiment
+    """
+    run_exp_args = args[:-1]
+    available_devices = args[-1]
+    spec = args[0]
+
+    # Get an available GPU device 
+    gpu_id = available_devices.get()
+    old_visible_devices = os.environ[c.VISIBLE]
+    os.environ[c.CVISIBLE] = str(gpu_id)
+
+    # Launch the experiment
+    try:
+        logger.info("Running experiment {} on GPU {}".format(spec["name"], gpu_id))
+        proc = multiprocessing.Process(target=run_experiment, args=run_exp_args)
+        proc.start()
+        logger.info("Waiting for experiment to finish....")
+        proc.join()
+    finally:
+        # Return the GPU toekn back to the queue.
+        os.environ[c.CVISIBLE] = old_visible_devices
+        available_devices.put(gpu_id)
+
 
 
 def main(specification_dir, out_dir, num_gpus, exps_per_gpu):
@@ -35,15 +106,43 @@ def main(specification_dir, out_dir, num_gpus, exps_per_gpu):
     """
 
     # 1. Load the specifications
+    specs = load_specifications(specification_dir)
     
     # 2. Create the output directory
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+    
+    if os.listdir(out_dir):
+        logger.warning("The output directory {} is not empty. Are you sure you want to continue?".format(out_dir))
+        time.sleep(3)
 
     # 3. Create the workers with specific environment variables
+    num_workers = num_gpus * exps_per_gpu
+    available_devices =  multiprocessing.Queue()
+    for g in range(num_gpus):
+        for _ in range(exps_per_gpu):
+            available_devices.put(g)
 
-    # 4. Distribute the workload
+    with multiprocessing.Pool(num_workers) as pool:
+        logger.info("Created {} workers".format(num_workers))
 
-    # 5. Launch the workers.
+        # 4. Create and distribute the workload
+        workload = [
+            (spec, J(out_dir, spec["name"]), available_devices) for spec in specs
+        ]
+        logger.info("Running {} jobs accross {} GPUs".format(len(workload), num_gpus))
 
+        
+        # 5. Launch the workers.
+        logger.info("Launching the workers using `run_experiment`.")
+        pool.imap_unordered(
+            launch_experiment_on_device,
+            workload
+        )
+    
+    logger.info("Success, all experiments completed!")
+        
+    
 
 
 if __name__ == '__main__':
