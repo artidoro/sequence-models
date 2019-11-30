@@ -17,7 +17,7 @@ class LSTMModel(SequenceModel):
             self.depth)
 
     
-    def predict(self, batch, padding=True):
+    def predict(self, inputs, padding=True):
         """
         Gets all one-step predictions for a batch of sentences.
         For each context window output the next word.
@@ -27,9 +27,13 @@ class LSTMModel(SequenceModel):
         and seq_len predictions
         with padding
         """
-        # Todo: Finish LSTM predict @Arti
-        raise NotImplementedError()
+        batch_size = inputs.shape[0]
+        self.model.eval()
+        hidden = self.model.init_hidden(batch_size)
+        output, hidden = self.model(inputs, hidden)
 
+        return output
+        
     def train_step(self, inputs, targets):
         """Performs an unsupervised train step for a given batch.
         Returns loss on batch.
@@ -38,16 +42,16 @@ class LSTMModel(SequenceModel):
         # TODO: Make use of self.optimizer
         batch_size = inputs.shape[0]
         seq_len = inputs.shape[1]
-        model.train()
+        self.model.train()
         total_loss = 0
 
-        hidden = model.init_hidden(args.batch_size)
-        for batch, i in enumerate(range(0, train_data.size(0) - 1, self.bptt)):
+        hidden = self.model.init_hidden(batch_size)
+        for batch, i in enumerate(range(0, seq_len - 1, self.bptt)):
             data, targets = get_batch(train_data, i)
             # Starting each batch, we detach the hidden state from how it was previously produced.
             # If we didn't, the model would try backpropagating all the way to start of the dataset.
             hidden = self.repackage_hidden(hidden)
-            model.zero_grad()
+            self.model.zero_grad()
             output, hidden = self.model(data, hidden)
             loss = nn.CrossEntropyLoss(output.view(-1, self.vocab), targets)
             self.optimizer.backward(loss)
