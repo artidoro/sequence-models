@@ -8,6 +8,7 @@ import config as c
 import time
 import itertools
 import math
+import numpy as np
 
 import torch
 import torch.optim as optim
@@ -18,14 +19,15 @@ from models.gated_cnn import GatedCNN
 from models.lstm import LSTMModel
 from models.sequence_model import SequenceModel
 from models.transformerXL import TransformerXL
-from data_generation.data_utils import torchtext_batch_iterators
+from data_generation.data_utils import torchtext_batch_iterators_split
+from models.utils.tqdm_logger import TqdmLogger
+
+import tqdm
 
 from os.path import exists as E
 from os.path import join as J
 
 import config as c
-
-logger = logging.getLogger(__name__)
 
 
 def set_spec_default_values(spec):
@@ -34,22 +36,34 @@ def set_spec_default_values(spec):
             spec[key] = value
     return spec
 
-def evaluate_model(sequence_model, eval_iter, max_iterations):
+def evaluate_model(sequence_model, eval_iter, max_iterations, vocab):
     """
     Computes perplexity of a given model on an evaluation iterator.
     """
     cross_entropy_loss = nn.CrossEntropyLoss()
-    total_cross_ent = 0
+    emb = nn.Embedding(vocab, vocab) 
+    emb.weight.data = torch.eye(vocab)
+    emb.to('cuda')
 
-    for idx, batch in tqdm(enumerate(eval_iter)):
+
+    total_cross_ent = 0
+    acc = []
+    for idx, batch in tqdm.tqdm(enumerate(eval_iter)):
         predictions = sequence_model.predict(batch.text)
-        cross_ent = cross_entropy_loss(predictions.view(-1, predictions.shape[-1]), batch.target.flatten())
+        percentage_correct = np.mean(
+            np.argmax(predictions.detach().cpu().numpy(), axis=-1) ==  batch.target.cpu().numpy()
+        )
+        acc.append(percentage_correct)
+        cross_ent = cross_entropy_loss(
+            predictions.view(-1, vocab), 
+            batch.target.flatten())
+
         total_cross_ent += cross_ent.item()
 
         if idx >= max_iterations:
             break
 
-    return math.exp(total_cross_ent / max_iterations)
+    return math.exp(total_cross_ent / max_iterations), np.mean(acc)
 
 def run_experiment(spec, experiment_directory):
     """Runs an experiment based on the desired experiment specification.
@@ -67,7 +81,7 @@ def run_experiment(spec, experiment_directory):
 
         algorithm = spec["algorithm"]
         batch_size = spec['batch_size']
-        bttp_len = spec['bttp_len']
+        bptt_len = spec['bptt_len']
         device = spec['device']
         hmm_hidden = spec['hmm_hidden']
         max_step = spec['max_step']
@@ -77,9 +91,17 @@ def run_experiment(spec, experiment_directory):
         # Unpack additional arguments <here>
 
     except KeyError:
-        logger.error("Invalid experiment specification: {}".format(spec))
+        print("Invalid experiment specification: {}".format(spec))
         raise
 
+    logging.basicConfig(level=logging.DEBUG)
+                    # filename=J(experiment_directory, 'out.log'),
+                    # filemode='w')
+    logger = logging.getLogger('exp_runner')
+
+
+    logger.info("Starting the experiment!")
+    logger.info(str(spec))
 
     # Create the directory
     if not os.path.exists(experiment_directory):
@@ -104,13 +126,16 @@ def run_experiment(spec, experiment_directory):
     DATA_FILE = 'V{}hmm_hidden_{}_lag_{}_vocab_{}.txt'.format(
         c.DATA_GENERATION_VERSION, hmm_hidden, sequence_dependence, vocab)
 
+    device = torch.device(device)
+
     # Create dataset iterators
-    train_path = os.path.join('train', DATA_FILE)
-    val_path = os.path.join('validation', DATA_FILE)
-    test_path = os.path.join('test', DATA_FILE)
-    train_iter, val_iter, test_iter = torchtext_batch_iterators(
-        'generated_data', train_path, val_path, test_path,
-        batch_size=batch_size, bptt_len=bttp_len, device=device, batch_first=False, repeat=True)
+    train_iter, test_iter = torchtext_batch_iterators_split(
+        ROOT_PATH, DATA_FILE, test_size=spec["test_size"],
+        batch_size=batch_size, bptt_len=bptt_len, device=device, batch_first=False, repeat=False)
+
+    train_perplex_iter,  test_perplex_iter = torchtext_batch_iterators_split(
+        ROOT_PATH, DATA_FILE, test_size=spec["test_size"],
+        batch_size=batch_size, bptt_len=bptt_len, device=device, batch_first=False, repeat=False)
 
     # Model
     model = sequence_model.get_model()
@@ -123,35 +148,66 @@ def run_experiment(spec, experiment_directory):
     train_loss = 0
     best_val_loss = None
 
+    losses = []
+    test_performance = []
+    train_performance = []
+    step_to_performance = []
+
+    num_steps = 0
     # Training Loop
+
+    tqdm_out = TqdmLogger(logger,level=logging.INFO)
+    progress = tqdm.tqdm(total=max_step,)
+
     try:
         for epoch in itertools.count(start=1):
             model.train()
             mems = tuple()
             for train_step, batch in enumerate(train_iter):
+                num_steps +=1
+                progress.update()
                 loss = sequence_model.train_step(batch.text, batch.target, train_step=train_step, mems=mems)
+                losses.append(loss)
+                progress.set_description("Loss {:.4f}".format(loss))
+
+
+
+                if num_steps % 100 == 0:
+                    progress.write("Saving loss performance!")
+                    np.save(J(experiment_directory, 'losses.npy'), losses)
+                    np.save(J(experiment_directory, 'test_performance.npy'), test_performance)
+                    np.save(J(experiment_directory, 'train_performance.npy'), train_performance)
+                    np.save(J(experiment_directory, 'step_to_performance.npy'), step_to_performance)
+                
+                if num_steps % 100 == 0:
+                    # Calculate perplexity
+                    progress.write("-"* 100)
+                    progress.write("Model Performance:")
+                    test_performance.append(evaluate_model(sequence_model, test_perplex_iter, 10000, vocab))
+                    train_performance.append(evaluate_model(sequence_model, train_perplex_iter, 10000, vocab))
+                    step_to_performance.append(num_steps)
+                    progress.write("Test (Perplex, Accuracy): {:.6f}, {:.6f}".format(*test_performance[-1]))
+                    progress.write("Train (Perplex, Accuracy): {:.6f}, {:.6f}".format(*train_performance[-1]))
+                    progress.write("Average loss (past 1000): {}".format(np.mean(losses[-1000:])))
 
                 if train_step >= max_step:
                     break
 
+        
+
             if train_step >= max_step:
-                print('-' * 100)
-                print('End of training')
+                progress.write('-' * 100)
+                progress.write('End of training')
+                break
 
-            # TODO: calculate validation loss & perplexity
-            val_loss = None
-            perplexity = None
-
-            for val_batch in val_iter:
-                preds = sequence_model.predict(val_batch.text)
-
-            if val_loss is None or val_loss < best_val_loss:
-                best_val_loss = val_loss
-                # TODO: save the best performing model so far(and its stats)
+            # if val_loss is None or val_loss < best_val_loss:
+            #     best_val_loss = val_loss
+            #     # TODO: save the best performing model so far(and its stats)
 
     except KeyboardInterrupt:
-        print('-' * 100)
-        print('Exiting from training early')
+        logger.info('-' * 100)
+        logger.info('Exiting from training early')
+        raise
 
 
 

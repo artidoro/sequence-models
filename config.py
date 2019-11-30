@@ -37,10 +37,10 @@ HYPERPARAMETERS = OrderedDict({
 
 DEFAULT_VALUES_SPEC = {
     'device': 'cuda',
-    'lr': 0.0002,
+    'lr': 0.002,
     'max_step': 100000,
     'eval_steps': 10,  # This is similar to the epoch in terms of number of iterations.
-    'eval_size': 1000, # The number of batches to evaluate on
+    'test_size': 10000, # Number of words in the test set.
     'eta_min': 0.0,
     'embedding_dim': 256,
     'hidden_dim': 256,
@@ -48,7 +48,7 @@ DEFAULT_VALUES_SPEC = {
     'scheduler_type': 'constant',
     'optimizer_type': 'adam',
     'warmup_step': 0,
-    'bptt_len': 28
+    'bptt_len': 32
 }
 
 REQUIRED_ATTRIBUTES = set(
