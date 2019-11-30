@@ -70,7 +70,7 @@ def main(specification_dir, start, end, info):
 
     for i, spec in enumerate(product_to_dict):
         # Set the name
-        file_name = "{}_{}".format(spec['algorithms'], i)
+        file_name = "{}_{}".format(spec['algorithm'], i)
         spec["name"] = file_name
         with open(J(specification_dir, file_name + ".json"), "w") as f:
             f.write(json.dumps(spec))

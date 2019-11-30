@@ -5,14 +5,30 @@ from collections import OrderedDict
 EXPERIMENT_RUNNER_SHOULD_OVERWRITE = True
 CVISIBLE = 'CUDA_VISIBLE_DEVICES'
 
+
+
+#   - Vocabulary Size (between 5k and 10k)
+#     - Time Dependence (exponential sweep between 2, 4, 8, 16, 32)
+#     - Data generation (Zipf's law)
+#     - Depth (2 4 8 16) 
+#     - Width ()
+#     - Choice of optimization = (Adam, SGD later)
+#     - Batch size + learn rate decay
+#     - Sentence length = (N + memory)
+
+
+
 HYPERPARAMETERS = OrderedDict({
-    'algorithms': [
+    'algorithm': [
         'lstm',
+        'cnn',
+        'transformer'
     ],
-    'depth': [2],
-    'width': [16],
+    'depth': [2, 4, 8, 16], # TODO DETERMINE
+    'width': [16, 32,128, 256, 512, 1024],
     'vocab': [5000],
-    'sequence_dependence': [2]
+    'batch_size': [32],
+    'sequence_dependence': [2,4,8,16]
 })
 
 
@@ -25,7 +41,7 @@ DEFAULT_VALUES_SPEC = {
     'momentum': 0.0,
     'scheduler_type': 'constant',
     'optimizer_type': 'sgd',
-    'warmup_step': 0.
+    'warmup_step': 0,
     'bptt_len': 28
 }
 

@@ -33,11 +33,11 @@ class SequenceModel(ABC):
         """Initializes the optimizer
         """
         if self.optimizer_type.lower() == 'sgd':
-            return optim.SGD(self.model.parameters(), lr=lr, momentum=momentum)
+            return optim.SGD(self.model.parameters(), lr=self.lr, momentum=self.momentum)
         elif self.optimizer_type.lower() == 'adam':
-            return optim.Adam(self.model.parameters(), lr=lr)
+            return optim.Adam(self.model.parameters(), lr=self.lr)
         elif self.optimizer_type.lower() == 'adagrad':
-            return optim.Adagrad(self.model.parameters(), lr=lr)
+            return optim.Adagrad(self.model.parameters(), lr=self.lr)
 
     def init_scheduler(self):
         """Initializes the scheduler
