@@ -45,8 +45,7 @@ def evaluate_model(sequence_model, eval_iter, max_iterations, vocab):
     emb.weight.data = torch.eye(vocab)
     emb.to('cuda')
 
-
-    total_cross_ent = 0
+    total_perplexity = 0
     acc = []
     for idx, batch in tqdm.tqdm(enumerate(eval_iter)):
         predictions = sequence_model.predict(batch.text)
@@ -54,16 +53,16 @@ def evaluate_model(sequence_model, eval_iter, max_iterations, vocab):
             np.argmax(predictions.detach().cpu().numpy(), axis=-1) ==  batch.target.cpu().numpy()
         )
         acc.append(percentage_correct)
-        cross_ent = cross_entropy_loss(
-            predictions.view(-1, vocab), 
-            batch.target.flatten())
 
-        total_cross_ent += cross_ent.item()
+        cross_ent = cross_entropy_loss(predictions.view(-1, vocab), batch.target.flatten())
+        perplexity = math.exp(cross_ent)
+        total_perplexity += cross_ent.item()
 
         if idx >= max_iterations:
             break
 
-    return math.exp(total_cross_ent / max_iterations), np.mean(acc)
+    return total_perplexity / max_iterations, np.mean(acc)
+
 
 def run_experiment(spec, experiment_directory):
     """Runs an experiment based on the desired experiment specification.
