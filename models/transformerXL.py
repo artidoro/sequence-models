@@ -16,7 +16,7 @@ class TransformerXL(SequenceModel):
     clip = 0.25
     div_val = 1
     d_embed = -1
-    d_head = 50
+    d_head = 64
     dropatt = 0.0
     dropout = 0.0
     eval_tgt_len = 50
@@ -24,7 +24,7 @@ class TransformerXL(SequenceModel):
     fp16 = False
     mem_len = 0
     multi_gpu = False
-    n_head = 10
+    n_head = 8
     param_init = 'normal'
     param_init_range = 0.1
     param_init_std = 0.02

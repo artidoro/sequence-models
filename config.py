@@ -26,11 +26,11 @@ HYPERPARAMETERS = OrderedDict({
         'cnn',
         'transformer'
     ],
-    'depth': [2, 4, 8, 16], # TODO DETERMINE
-    'width': [16, 32,128, 256, 512, 1024],
-    'sequence_dependence': [2,4,8,16],
-    'vocab': [5000],
-    'hmm_hidden': [100],
+    'depth': [2, 4, 8, 16],
+    'width': [16, 128, 1024],
+    'sequence_dependence': [2, 4, 8, 16],
+    'vocab': [1000],
+    'hmm_hidden': [50],
     'batch_size': [32],
 })
 
