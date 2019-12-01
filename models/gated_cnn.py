@@ -76,7 +76,7 @@ class GatedCNNModel(nn.Module):
 
         h = h.view(-1, self.out_chs) # (bs, Cout*seq_len)
         out = self.fc(h).view(-1, self.seq_len, self.ans_size) # (bs, ans_size)
-        # out = F.log_softmax(out, dim=-1)
+        out = F.log_softmax(out, dim=-1)
 
 
         return out
