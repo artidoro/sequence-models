@@ -170,7 +170,7 @@ class TransformerXL(SequenceModel):
             inputs : a Tensor of shape (batch_size, input_seq_length)
 
         Returns:
-            probs : a Tensor of shape (batch_size, vocab_size)
+            logits : a Tensor of shape (batch_size, input_seq_length, vocab_size)
         """
 
         # Turn on evaluation mode which disables dropout.
@@ -194,15 +194,12 @@ class TransformerXL(SequenceModel):
             mems = tuple()
             ret = self.model.forward_generate(inputs, *mems)
             logits, mems = ret[0], ret[1:]
-            logits = logits[-1] # Only keep logits from the last step
-
-            probs = F.softmax(logits, dim=-1)
 
         # Switch back to the training mode
         self.model.reset_length(self.tgt_len, self.ext_len, self.mem_len)
         self.model.train()
 
-        return probs        
+        return logits        
 
 
     def train_step(self, inputs, targets, mems=tuple()):
