@@ -91,8 +91,6 @@ def torchtext_batch_iterators(root_path, train_path, validation_path, test_path,
     train_iter, val_iter, test_iter = data.BPTTIterator.splits((train, validation, test),
         batch_size=batch_size, device=device, bptt_len=bptt_len, repeat=repeat)
 
-
-
     return train_iter, val_iter, test_iter
 
 def torchtext_batch_iterators(root_path, train_path, test_path,

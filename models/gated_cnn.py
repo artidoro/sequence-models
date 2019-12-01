@@ -142,7 +142,7 @@ class GatedCNN(SequenceModel):
         return probs
 
     
-    def train_step(self, inputs, targets, train_step=0, mems=None):
+    def train_step(self, inputs, targets, mems=None):
         """
         Performs an unsupervised train step for a given batch.
         Returns loss on batch.
@@ -156,9 +156,6 @@ class GatedCNN(SequenceModel):
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-
-        # Update scheduler
-        self.update_scheduler(train_step)
 
         return loss
 

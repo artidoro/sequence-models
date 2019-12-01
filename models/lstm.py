@@ -43,7 +43,7 @@ class LSTMModel(SequenceModel):
         return output
         
         
-    def train_step(self, inputs, targets, train_step=0, mems=None):
+    def train_step(self, inputs, targets, mems=None):
 
         """Performs an unsupervised train step for a given batch.
         Returns loss on batch.
@@ -57,10 +57,10 @@ class LSTMModel(SequenceModel):
         lossfn = nn.CrossEntropyLoss()
 
         hidden = self.model.init_hidden(batch_size)
-        # for batch, i in enumerate(range(0, seq_len, self.bptt_len)):
-        #     bp_seq_len = min(self.bptt_len, seq_len - i)
-        #     inp = inputs[:, i:i+bp_seq_len]
-        #     tar = targets[:, i:i+bp_seq_len]
+        for batch, i in enumerate(range(0, seq_len, self.bptt_len)):
+            bp_seq_len = min(self.bptt_len, seq_len - i)
+            inp = inputs[:, i:i+bp_seq_len]
+            tar = targets[:, i:i+bp_seq_len]
         #     # Starting each batch, we detach the hidden state from how it was previously produced.
         #     # If we didn't, the model would try backpropagating all the way to start of the dataset.
         hidden = self.repackage_hidden(hidden)
@@ -76,9 +76,6 @@ class LSTMModel(SequenceModel):
 
 
         total_loss += loss.item()
-
-        # Update scheduler
-        self.update_scheduler(train_step)
 
         return total_loss
 

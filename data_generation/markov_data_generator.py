@@ -106,7 +106,8 @@ def hmm_generator_short_long(lag_size, output_length,
 ###############
 # Increase this as we change the generation protocol and push every time to github so that we can
 # track the changes in how the data is generated.
-GEN_VERSION = 0
+# GEN_VERSION = 0
+GEN_VERSION = 1 # generate both training and test data and shuffle the lines in the file.
 ###############
 
 dep = 2
@@ -223,21 +224,21 @@ if __name__ == '__main__':
                     (next_hid_sequence, next_obs_sequence) = hmm_generator_short_long(lag, args.words_line,
                                         prev_hidden_state_seq, transition_matrix, emission_matrix)
 
-                    line = ' '.join(map(str, [ x for i,x in enumerate(next_obs_sequence)])) + '\n'
+                    line = ' '.join(map(str, [x for i,x in enumerate(next_obs_sequence)])) + '\n'
                     test_file.write(line)
                     prev_hidden_state_seq = next_hid_sequence
 
         train_lines = []
         test_lines = []
         with open(train_file_name, 'r') as train_file, open(test_file_name, 'r') as test_file:
-            train_file.readlines()
-            test_file.readline()
+            train_lines = train_file.readlines()
+            test_lines = test_file.readlines()
 
         random.shuffle(train_lines)
         random.shuffle(test_lines)
 
         with open(train_file_name, 'w') as train_file, open(test_file_name, 'w') as test_file:
-            train_file.readlines()
-            test_file.readline()
+            train_file.writelines(train_lines)
+            test_file.writelines(test_lines)
 
         print('Done generating file {}/{}.'.format(idx + 1, args.lag_max + 1 - args.lag_min))
