@@ -176,6 +176,8 @@ def run_experiment(spec, experiment_directory):
                 losses.append(loss)
                 progress.set_description("Loss {:.4f}".format(loss))
 
+                # Update scheduler
+                sequence_model.update_scheduler(train_step)
 
 
                 if num_steps % 1000 == 0:

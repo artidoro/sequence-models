@@ -205,7 +205,7 @@ class TransformerXL(SequenceModel):
         return probs        
 
 
-    def train_step(self, inputs, targets, mems=tuple(), train_step=0):
+    def train_step(self, inputs, targets, mems=tuple()):
         """
         Performs an unsupervised train step for a given batch.
         Returns loss on batch.
@@ -234,9 +234,6 @@ class TransformerXL(SequenceModel):
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
 
         self.optimizer.step()
-
-        # Update scheduler
-        self.update_scheduler(train_step)
 
         return loss
 
