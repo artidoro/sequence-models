@@ -166,10 +166,10 @@ if __name__ == '__main__':
     # Each should have length file len.
     for idx, lag in enumerate([2**exp for exp in range(args.lag_min, args.lag_max + 1)]):
 
-        train_file_name = '{}/train_V{}_{}_lag_{}_vocab_{}_seqlen_{}_wordsline_{}.txt'.format(args.dest_folder, GEN_VERSION,
-            file_base, lag, args.vocab_size, args.train_len, args.words_line)
-        test_file_name = '{}/test_V{}_{}_lag_{}_vocab_{}_seqlen_{}_wordsline_{}.txt'.format(args.dest_folder, GEN_VERSION,
-            file_base, lag, args.vocab_size, args.train_len, args.words_line)
+        train_file_name = '{}/train_V{}_{}_lag_{}_vocab_{}.txt'.format(args.dest_folder, GEN_VERSION,
+            file_base, lag, args.vocab_size)
+        test_file_name = '{}/test_V{}_{}_lag_{}_vocab_{}.txt'.format(args.dest_folder, GEN_VERSION,
+            file_base, lag, args.vocab_size)
         os.makedirs(os.path.dirname(train_file_name), exist_ok=True)
         os.makedirs(os.path.dirname(test_file_name), exist_ok=True)
         with open(train_file_name, 'w') as train_file, open(test_file_name, 'w') as test_file:
