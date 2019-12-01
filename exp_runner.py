@@ -63,7 +63,7 @@ def evaluate_model(sequence_model, eval_iter, max_iterations, vocab):
 
         acc.append(percentage_correct)
 
-        cross_ent = cross_entropy_loss(predictions.view(-1, vocab), batch.target.flatten())
+        cross_ent = cross_entropy_loss(predictions.reshape(-1, vocab), batch.target.flatten())
         total_cross_entropy += cross_ent
         num_batches += 1
 
