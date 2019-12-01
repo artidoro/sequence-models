@@ -99,7 +99,8 @@ def launch_experiment_on_device(args):
         proc.join()
 
         logger.info("Experiment {} completed sucessfully".format(spec["name"]))
-
+    except:
+        pass
     finally:
         # Return the GPU toekn back to the queue.
         os.environ[c.CVISIBLE] = old_visible_devices
@@ -136,9 +137,10 @@ def main(specification_dir, out_dir, num_gpus, exps_per_gpu):
 
 
         # 4. Create and distribute the workload
-        workload = [
+        workload = list(sorted([
             (spec, J(out_dir, spec["name"]), available_devices) for spec in specs
-        ]
+        ], key=lambda x: (1 + 10000*x[0]['depth'])*x[0]['width']))
+        
         logger.info("Running {} jobs accross {} GPUs".format(len(workload), num_gpus))
 
         # 5. Launch the workers.

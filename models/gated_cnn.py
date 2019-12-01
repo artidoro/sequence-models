@@ -103,6 +103,11 @@ class GatedCNN(SequenceModel):
         self.n_layers = self.depth
         self.out_chs = self.width
         self.vocab_size = self.vocab
+<<<<<<< HEAD
+=======
+        self.kernel = (self.kernel[0], self.embedding_dim)
+        self.seq_len = self.bptt_len
+>>>>>>> 44d388512fa72f9005954b4db2f3ea5711f48f50
 
         model = GatedCNNModel(self.vocab_size, self.embedding_dim, self.n_layers, self.kernel_width, self.out_chs, self.res_block_count, dropout=self.dropout)
         if torch.cuda.is_available():

@@ -47,28 +47,28 @@ def evaluate_model(sequence_model, eval_iter, max_iterations, vocab):
         return sequence_model.evaluate(eval_iter, max_iterations)
 
     cross_entropy_loss = nn.CrossEntropyLoss()
-    emb = nn.Embedding(vocab, vocab) 
-    emb.weight.data = torch.eye(vocab)
-    emb.to('cuda')
 
-    total_cross_entropy = 0
-    num_batches = 0
-    acc = []
+    with torch.no_grad():
+        cross_entropy_loss = nn.CrossEntropyLoss()
 
-    for idx, batch in tqdm.tqdm(enumerate(eval_iter)):
-        predictions = sequence_model.predict(batch.text)
-        percentage_correct = np.mean(
-            np.argmax(predictions.detach().cpu().numpy(), axis=-1) ==  batch.target.cpu().numpy()
-        )
+        total_cross_entropy = 0
+        num_batches = 0
+        acc = []
 
-        acc.append(percentage_correct)
+        for idx, batch in tqdm.tqdm(enumerate(eval_iter)):
+            predictions = sequence_model.predict(batch.text)
+            percentage_correct = np.mean(
+                np.argmax(predictions.detach().cpu().numpy(), axis=-1) ==  batch.target.cpu().numpy()
+            )
 
-        cross_ent = cross_entropy_loss(predictions.reshape(-1, vocab), batch.target.flatten())
-        total_cross_entropy += cross_ent
-        num_batches += 1
+            acc.append(percentage_correct)
 
-        if idx >= max_iterations:
-            break
+            cross_ent = cross_entropy_loss(predictions.reshape(-1, vocab), batch.target.flatten())
+            total_cross_entropy += cross_ent
+            num_batches += 1
+
+            if idx >= max_iterations:
+                break
 
     if (num_batches == 0):
         return float('inf'), 0
@@ -197,12 +197,12 @@ def run_experiment(spec, experiment_directory):
                     np.save(J(experiment_directory, 'train_performance.npy'), train_performance)
                     np.save(J(experiment_directory, 'step_to_performance.npy'), step_to_performance)
                 
-                if num_steps % 250 == 0:
+                if num_steps % 1000 == 0:
                     # Calculate perplexity
                     progress.write("-"* 100)
                     progress.write("Model Performance:")
-                    test_performance.append(evaluate_model(sequence_model, test_perplex_iter, 10000, vocab))
-                    train_performance.append(evaluate_model(sequence_model, train_perplex_iter, 10000, vocab))
+                    test_performance.append(evaluate_model(sequence_model, test_perplex_iter, 2000, vocab))
+                    train_performance.append(evaluate_model(sequence_model, train_perplex_iter, 1000, vocab))
                     step_to_performance.append(num_steps)
                     progress.write("Test (Perplex, Accuracy): {:.6f}, {:.6f}".format(*test_performance[-1]))
                     progress.write("Train (Perplex, Accuracy): {:.6f}, {:.6f}".format(*train_performance[-1]))
@@ -227,6 +227,66 @@ def run_experiment(spec, experiment_directory):
         logger.info('Exiting from training early')
         raise
 
+
+
+def parameter_count(spec, experiment_directory):
+    # spec, experiment_directory = args
+    
+    # Unpack some of the specification information
+    try:
+        spec = set_spec_default_values(spec)
+
+        algorithm = spec["algorithm"]
+        batch_size = spec['batch_size']
+        bptt_len = spec['bptt_len']
+        spec['device'] = 'cpu'
+        device = 'cpu'
+        hmm_hidden = spec['hmm_hidden']
+        max_step = spec['max_step']
+        name = spec['name']
+        sequence_dependence = spec['sequence_dependence']
+        vocab = spec['vocab']
+        # Unpack additional arguments <here>
+
+    except KeyError:
+        print("Invalid experiment specification: {}".format(spec))
+        raise
+
+    logging.basicConfig(level=logging.DEBUG)
+                    # filename=J(experiment_directory, 'out.log'),
+                    # filemode='w')
+    logger = logging.getLogger('exp_runner')
+
+
+    logger.info("Starting the parameter counter!")
+    logger.info(str(spec))
+
+    # Create the directory
+    if not os.path.exists(experiment_directory):
+        os.makedirs(experiment_directory)
+    else:
+        assert c.EXPERIMENT_RUNNER_SHOULD_OVERWRITE, "Experiment directory {} already exists".format(experiment_directory)
+
+    # Choose sequence model type
+    if algorithm == 'transformer':
+        sequence_model = TransformerXL(**spec)
+    elif algorithm == 'lstm':
+        sequence_model = LSTMModel(**spec)
+    elif algorithm == 'cnn':
+        sequence_model = GatedCNN(**spec)
+    else:
+        print(spec)
+
+    # Model
+    model = sequence_model.get_model()
+    pp=0
+    for p in list(model.parameters()):
+        nn=1
+        for s in list(p.size()):
+            nn = nn*s
+        pp += nn
+    print(pp)
+    np.save(J(experiment_directory, 'parameters.npy'), [pp])
 
 
 if __name__ == '__main__':

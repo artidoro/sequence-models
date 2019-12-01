@@ -24,11 +24,13 @@ def main():
     experiments = glob.glob(J(args.output_directory, "*"))
 
     for ex in tqdm.tqdm(experiments):
-        losses = np.load(J(ex, "losses.npy"))
-        test_perplexity, test_acc = zip(*np.load(J(ex, "test_performance.npy")))
-        train_perplexity, train_acc = zip(*np.load(J(ex, "train_performance.npy")))
-
-        ls = moving_average(losses, 2)
+        try:
+            losses = np.load(J(ex, "losses.npy"))
+            test_perplexity, test_acc = zip(*np.load(J(ex, "test_performance.npy")))
+            train_perplexity, train_acc = zip(*np.load(J(ex, "train_performance.npy")))
+        except FileNotFoundError as e:
+            continue 
+        ls = moving_average(losses, 50)
         plt.scatter(range(len(ls)), ls, s=1)
         
         plt.title("Loss")

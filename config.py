@@ -18,7 +18,8 @@ DATA_GENERATION_VERSION = 3
 #     - Batch size + learn rate decay
 #     - Sentence length = (N + memory)
 
-
+# {"algorithm": "transformer", "depth": 8, "width": 32, "sequence_dependence": 4, "vocab": 1000, "hmm_hidden": 50, "batch_size": 32, "name": "transformer_1", "lr": 0.0001, "multi_gpu": "True", "clip": 0.25,
+# "scheduler_type": "constant", "warmup_step": 2000}
 
 HYPERPARAMETERS = OrderedDict({
     'algorithm': [
@@ -26,24 +27,38 @@ HYPERPARAMETERS = OrderedDict({
         'cnn',
         'transformer'
     ],
-    'depth': [2, 4, 8, 16],
-    'width': [16, 128, 1024],
+    'depth': [2, 4, 8],
+    'width': [32, 128, 256, 512],
     'sequence_dependence': [2, 4, 8, 16],
     'vocab': [1000],
     'hmm_hidden': [50],
     'batch_size': [32],
 })
 
+ALGORITHM_SPECIFIC_PARAMETERS = {
+    'transformer': { 
+        "lr": 0.0001,
+        "dropout": 0.1, 
+        "multi_gpu": "False", 
+        "clip": 0.25,
+        "scheduler_type": "constant",
+        "warmup_step": 2000
+    },
+    'cnn': {
+        "lr": 2e-4,
+    },
+    'lstm': {
+        'lr': 0.001
+    }
+}
 
 DEFAULT_VALUES_SPEC = {
     'device': 'cuda',
-    'lr': 0.002,
-    'max_step': 10000,
+    'max_step': 100000,
     'eval_steps': 10,  # This is similar to the epoch in terms of number of iterations.
     'test_size': 9999, # Number of words in the test set.
     'eta_min': 0.0,
     'embedding_dim': 256,
-    'hidden_dim': 256,
     'momentum': 0.0,
     'scheduler_type': 'constant',
     'optimizer_type': 'adam',
