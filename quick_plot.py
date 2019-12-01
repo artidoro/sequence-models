@@ -28,7 +28,8 @@ def main():
         test_perplexity, test_acc = zip(*np.load(J(ex, "test_performance.npy")))
         train_perplexity, train_acc = zip(*np.load(J(ex, "train_performance.npy")))
 
-        plt.plot (moving_average(losses, 100))
+        ls = moving_average(losses, 2)
+        plt.scatter(range(len(ls)), ls, s=1)
         
         plt.title("Loss")
         plt.savefig(J(ex, 'losses.png'))

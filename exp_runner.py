@@ -179,7 +179,7 @@ def run_experiment(spec, experiment_directory):
                 progress.set_description("Loss {:.4f}".format(loss))
 
                 # Update scheduler
-                sequence_model.update_scheduler(train_step)
+                sequence_model.update_scheduler(num_steps)
 
 
                 if num_steps % 500 == 0:
@@ -200,12 +200,12 @@ def run_experiment(spec, experiment_directory):
                     progress.write("Train (Perplex, Accuracy): {:.6f}, {:.6f}".format(*train_performance[-1]))
                     progress.write("Average loss (past 1000): {}".format(np.mean(losses[-1000:])))
                     
-                if train_step >= max_step:
+                if num_steps >= max_step:
                     break
 
         
 
-            if train_step >= max_step:
+            if num_steps >= max_step:
                 progress.write('-' * 100)
                 progress.write('End of training')
                 break
