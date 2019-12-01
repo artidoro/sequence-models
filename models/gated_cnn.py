@@ -135,13 +135,12 @@ class GatedCNN(SequenceModel):
         # Evaluation
         with torch.no_grad():
             X = self.to_var(inputs)
-            log_probs = self.model(X)
-            probs = torch.exp(log_probs)
+            logits = self.model(X)
 
         # Switch back to the training mode
         self.model.train()
 
-        return probs
+        return logits
 
     
     def train_step(self, inputs, targets, mems=None):
