@@ -163,7 +163,7 @@ if __name__ == '__main__':
         help='whether to use mc generator. By default uses hmm.')
     parser.add_argument('--hidden_size', default=hidden_size_default, type=int,
         help='the size of the hidden state. (default {})'.format(hidden_size_default))
-parser.add_argument('--train_len', default=train_len_default, type=int,
+    parser.add_argument('--train_len', default=train_len_default, type=int,
         help='the number of words in each file. (default {})'.format(train_len_default))
     parser.add_argument('--test_len', default=test_len_default, type=int,
         help='the number of words in each file. (default {})'.format(test_len_default))
