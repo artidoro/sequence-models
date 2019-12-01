@@ -72,6 +72,17 @@ def main(specification_dir, start, end, info):
         # Set the name
         file_name = "{}_{}".format(spec['algorithm'], i)
         spec["name"] = file_name
+        alg = spec["algorithm"]
+        for k in c.ALGORITHM_SPECIFIC_PARAMETERS[alg]:
+            spec[k] = c.ALGORITHM_SPECIFIC_PARAMETERS[alg][k]
+
+        spec["embedding_dim"] = spec["width"]
+
+        for key, value in c.DEFAULT_VALUES_SPEC.items():
+            if key not in spec:
+                spec[key] = value
+        
+
         with open(J(specification_dir, file_name + ".json"), "w") as f:
             f.write(json.dumps(spec))
 

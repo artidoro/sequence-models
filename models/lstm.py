@@ -19,7 +19,7 @@ class LSTMModel(SequenceModel):
             'LSTM',
             self.vocab,
             self.embedding_dim,
-            self.hidden_dim,
+            self.width,
             self.depth)
 
     def predict(self, inputs, padding=True):
