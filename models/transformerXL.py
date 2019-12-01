@@ -170,7 +170,7 @@ class TransformerXL(SequenceModel):
             inputs : a Tensor of shape (batch_size, input_seq_length)
 
         Returns:
-            probs : a Tensor of shape (batch_size, vocab_size)
+            logits : a Tensor of shape (batch_size, input_seq_length, vocab_size)
         """
 
         # Turn on evaluation mode which disables dropout.
@@ -194,18 +194,15 @@ class TransformerXL(SequenceModel):
             mems = tuple()
             ret = self.model.forward_generate(inputs, *mems)
             logits, mems = ret[0], ret[1:]
-            logits = logits[-1] # Only keep logits from the last step
-
-            probs = F.softmax(logits, dim=-1)
 
         # Switch back to the training mode
         self.model.reset_length(self.tgt_len, self.ext_len, self.mem_len)
         self.model.train()
 
-        return probs        
+        return logits        
 
 
-    def train_step(self, inputs, targets, mems=tuple(), train_step=0):
+    def train_step(self, inputs, targets, mems=tuple()):
         """
         Performs an unsupervised train step for a given batch.
         Returns loss on batch.
@@ -234,9 +231,6 @@ class TransformerXL(SequenceModel):
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
 
         self.optimizer.step()
-
-        # Update scheduler
-        self.update_scheduler(train_step)
 
         return loss
 
