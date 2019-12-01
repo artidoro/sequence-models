@@ -45,7 +45,7 @@ DEFAULT_VALUES_SPEC = {
     'embedding_dim': 256,
     'hidden_dim': 256,
     'momentum': 0.0,
-    'scheduler_type': 'dev_perf',
+    'scheduler_type': 'constant',
     'optimizer_type': 'adam',
     'warmup_step': 0,
     'bptt_len': 32

@@ -40,9 +40,10 @@ class GatedCNNModel(nn.Module):
         self.b = nn.ParameterList([nn.Parameter(torch.randn(1, out_chs, 1, 1)) for _ in range(n_layers)])
         self.c = nn.ParameterList([nn.Parameter(torch.randn(1, out_chs, 1, 1)) for _ in range(n_layers)])
 
-        self.fc = nn.Linear(out_chs * seq_len, ans_size)
+        self.fc = nn.Linear(out_chs, ans_size)
         self.seq_len = seq_len
         self.out_chs = out_chs
+        self.ans_size = ans_size
 
 
     def forward(self, x):
@@ -73,9 +74,10 @@ class GatedCNNModel(nn.Module):
                 h += res_input
                 res_input = h
 
-        h = h.view(bs, self.out_chs*seq_len) # (bs, Cout*seq_len)
-        out = self.fc(h) # (bs, ans_size)
+        h = h.view(-1, self.out_chs) # (bs, Cout*seq_len)
+        out = self.fc(h).view(-1, self.seq_len, self.ans_size) # (bs, ans_size)
         out = F.log_softmax(out, dim=-1)
+
 
         return out
 
@@ -148,10 +150,11 @@ class GatedCNN(SequenceModel):
         Returns loss on batch.
         """
         X = self.to_var(inputs)
-        Y = self.to_var(targets[:, -1]) # GatedCNN only expects a 1-D array of the next token in each sequence
+        # Y = self.to_var(targets[:, -1]) # GatedCNN only expects a 1-D array of the next token in each sequence
 
         pred = self.model(X)
-        loss = nn.NLLLoss()(pred, Y)
+        
+        loss = nn.CrossEntropyLoss()(pred.view(-1, self.vocab), targets.flatten())
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -160,5 +163,5 @@ class GatedCNN(SequenceModel):
         # Update scheduler
         self.update_scheduler(train_step)
 
-        return loss
+        return loss.item()
 
