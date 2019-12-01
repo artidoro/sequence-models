@@ -1,6 +1,9 @@
+import math
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import tqdm
 
 from models.sequence_model import SequenceModel
 from models.mem_transformer import MemTransformerLM
@@ -19,7 +22,7 @@ class TransformerXL(SequenceModel):
     d_head = 64
     dropatt = 0.0
     dropout = 0.0
-    eval_tgt_len = 50
+    eval_tgt_len = 32
     ext_len = 0
     fp16 = False
     mem_len = 0
@@ -108,6 +111,7 @@ class TransformerXL(SequenceModel):
         d_model = self.width
         d_inner = self.width * 2
         vocab_size = self.vocab
+        tgt_len = self.bptt_len
 
         if self.d_embed < 0:
             self.d_embed = d_model
@@ -200,6 +204,52 @@ class TransformerXL(SequenceModel):
         self.model.train()
 
         return logits        
+
+
+    def evaluate(self, eval_iter, max_iterations):
+        # Turn on evaluation mode which disables dropout.
+        self.model.eval()
+
+        # If the model does not use memory at all, make the ext_len longer.
+        # Otherwise, make the mem_len longer and keep the ext_len the same.
+        if self.mem_len == 0:
+            self.model.reset_length(self.eval_tgt_len,
+                self.ext_len + self.bptt_len - self.eval_tgt_len, self.mem_len)
+        else:
+            self.model.reset_length(self.eval_tgt_len,
+                self.ext_len, self.mem_len + self.bptt_len - self.eval_tgt_len)
+
+        # Evaluation
+        acc = []
+        total_len, total_loss = 0, 0.
+        with torch.no_grad():
+            mems = tuple()
+            for idx, batch in tqdm.tqdm(enumerate(eval_iter)):
+                seq_len = batch.text.size(0)
+                ret = self.model(batch.text.t(), batch.target.t(), *mems)
+                loss, mems = ret[0], ret[1:]
+
+                '''
+                percentage_correct = np.mean(
+                    np.argmax(loss.detach().cpu().numpy(), axis=-1) == batch.target.cpu().numpy())
+                acc.append(percentage_correct)
+                '''
+                acc.append(-1)
+                
+                loss = loss.mean()
+                total_loss += seq_len * loss.float().item()
+                total_len += seq_len
+
+                if idx >= max_iterations:
+                    break
+
+        # Switch back to the training mode
+        self.model.reset_length(self.bptt_len, self.ext_len, self.mem_len)
+        self.model.train()
+
+        perplexity = math.exp(total_loss / total_len)
+        accuracy = np.mean(acc)
+        return perplexity, accuracy
 
 
     def train_step(self, inputs, targets, mems=tuple()):
