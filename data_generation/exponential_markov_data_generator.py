@@ -8,9 +8,6 @@ from tqdm import tqdm
 # helper functions
 ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
 
-MAX_NONZERO_EMISSION_ENTRIES_PER_ROW = 2 # todo turn into command line argument
-# MAX_NONZERO_EMISSION_ENTRIES_PER_ROW = 1 # todo turn into command line argument
-
 # Generate an array of length num_states, and sum to 1
 def initialize_start_prob(num_states, max_nonzero_entries=None):
     # v = np.random.uniform(size=num_states)
@@ -128,7 +125,9 @@ def hmm_generator_short_long(lag_size, output_length,
 ###############
 # Increase this as we change the generation protocol and push every time to github so that we can
 # track the changes in how the data is generated.
-GEN_VERSION = 3
+# Gen_Version = 0
+# GEN_VERSION = 1 # Exponential + Sparse
+GEN_VERSION = 3 # Shuffle
 ###############
 
 dep = 2
@@ -137,9 +136,13 @@ lag_min_default = 1
 lag_max_default = 5
 mc_default = False
 hidden_size_default = 100
-sequence_len_default = 10000000
-words_per_line_default = 64
+train_len_default = 10000000
+test_len_default = 10000
+words_per_line_default = 32
 dest_folder_default = 'generated_data'
+model_seed = 0
+data_seed = 0
+max_non_zero = 2
 
 if __name__ == '__main__':
     description = ("Generate data with HMM or MC models with dependency on the previous step t-1 "
@@ -160,12 +163,20 @@ if __name__ == '__main__':
         help='whether to use mc generator. By default uses hmm.')
     parser.add_argument('--hidden_size', default=hidden_size_default, type=int,
         help='the size of the hidden state. (default {})'.format(hidden_size_default))
-    parser.add_argument('--sequence_len', default=sequence_len_default, type=int,
-        help='the number of words in each file. (default {})'.format(sequence_len_default))
+parser.add_argument('--train_len', default=train_len_default, type=int,
+        help='the number of words in each file. (default {})'.format(train_len_default))
+    parser.add_argument('--test_len', default=test_len_default, type=int,
+        help='the number of words in each file. (default {})'.format(test_len_default))
     parser.add_argument('--words_line', default=words_per_line_default, type=int,
         help='the number of words per line. (default {})'.format(words_per_line_default))
     parser.add_argument('--dest_folder', default=dest_folder_default,
         help='the destination folder. (default {})'.format(dest_folder_default))
+    parser.add_argument('--max_nonzero_emission', default=max_non_zero,
+        help='the number of non-zero elements in each row of the emission matrix (default {})'.format(max_non_zero))
+    parser.add_argument('--model_seed', default=model_seed,
+        help='the seed used to initialize the model parameters. (default {})'.format(model_seed))
+    parser.add_argument('--data_seed', default=data_seed,
+        help='the seed used to initialize the data. (default {})'.format(data_seed))
     args = parser.parse_args()
 
     seed = 0
@@ -179,10 +190,13 @@ if __name__ == '__main__':
     # Each should have length file len.
     for idx, lag in enumerate([2**exp for exp in range(args.lag_min, args.lag_max + 1)]):
 
-        file_name = '{}/V{}{}_lag_{}_vocab_{}.txt'.format(args.dest_folder, GEN_VERSION,
+        train_file_name = '{}/train_V{}_{}_lag_{}_vocab_{}.txt'.format(args.dest_folder, GEN_VERSION,
             file_base, lag, args.vocab_size)
-        os.makedirs(os.path.dirname(file_name), exist_ok=True)
-        with open(file_name, 'w') as out_file:
+        test_file_name = '{}/test_V{}_{}_lag_{}_vocab_{}.txt'.format(args.dest_folder, GEN_VERSION,
+            file_base, lag, args.vocab_size)
+        os.makedirs(os.path.dirname(train_file_name), exist_ok=True)
+        os.makedirs(os.path.dirname(test_file_name), exist_ok=True)
+        with open(train_file_name, 'w') as train_file, open(test_file_name, 'w') as test_file:
 
             # Code specific for Markov Chain generation.
             if args.mc:
@@ -192,11 +206,20 @@ if __name__ == '__main__':
                 # Initialize the transition matrix.
                 transition_matrix = init_trans_matrix(dep, args.vocab_size, args.vocab_size)
 
-                for i in tqdm(range(int(np.ceil(args.sequence_len/args.words_line)))):
+                # Training.
+                for i in tqdm(range(int(np.ceil(args.train_len/args.words_line)))):
                     next_sequence = mc_generator_short_long(lag, args.words_line,
                                         prev_state_seq, transition_matrix)
                     line = ' '.join(map(str, next_sequence)) + '\n'
-                    out_file.write(line)
+                    train_file.write(line)
+                    prev_state_seq = next_sequence
+
+                # Testing.
+                for i in tqdm(range(int(np.ceil(args.test_len/args.words_line)))):
+                    next_sequence = mc_generator_short_long(lag, args.words_line,
+                                        prev_state_seq, transition_matrix)
+                    line = ' '.join(map(str, next_sequence)) + '\n'
+                    test_file.write(line)
                     prev_state_seq = next_sequence
 
             # Code specific for HMM generation.
@@ -207,15 +230,38 @@ if __name__ == '__main__':
 
                 # Initialize the transition matrix.
                 transition_matrix = init_trans_matrix(dep, args.hidden_size, args.hidden_size)
-                emission_matrix = rand_init_prob_matrix(args.hidden_size, args.vocab_size, MAX_NONZERO_EMISSION_ENTRIES_PER_ROW)
+                emission_matrix = rand_init_prob_matrix(args.hidden_size, args.vocab_size, max_non_zero)
                 print(transition_matrix)
                 print(emission_matrix)
 
-                for i in tqdm(range(int(np.ceil(args.sequence_len/args.words_line)))):
+                # Training.
+                for i in tqdm(range(int(np.ceil(args.train_len/args.words_line)))):
                     (next_hid_sequence, next_obs_sequence) = hmm_generator_short_long(lag, args.words_line,
                                         prev_hidden_state_seq, transition_matrix, emission_matrix)
                     line = ' '.join(map(str, next_obs_sequence)) + '\n'
-                    out_file.write(line)
+                    test_file.write(line)
                     prev_hidden_state_seq = next_hid_sequence
+
+                # Testing.
+                for i in tqdm(range(int(np.ceil(args.test_len/args.words_line)))):
+                    (next_hid_sequence, next_obs_sequence) = hmm_generator_short_long(lag, args.words_line,
+                                        prev_hidden_state_seq, transition_matrix, emission_matrix)
+                    line = ' '.join(map(str, next_obs_sequence)) + '\n'
+                    test_file.write(line)
+                    prev_hidden_state_seq = next_hid_sequence
+
+        train_lines = []
+        test_lines = []
+        with open(train_file_name, 'r') as train_file, open(test_file_name, 'r') as test_file:
+            train_lines = train_file.readlines()
+            test_lines = test_file.readlines()
+
+        random.shuffle(train_lines)
+        random.shuffle(test_lines)
+
+        with open(train_file_name, 'w') as train_file, open(test_file_name, 'w') as test_file:
+            train_file.writelines(train_lines)
+            test_file.writelines(test_lines)
+
 
         print('Done generating file {}/{}.'.format(idx + 1, args.lag_max + 1 - args.lag_min))

@@ -39,7 +39,7 @@ class SequenceModel(ABC):
         elif self.optimizer_type.lower() == 'adam':
             return optim.Adam(self.model.parameters(), lr=self.lr)
         elif self.optimizer_type.lower() == 'adagrad':
-            return optim.Adagrad(self.model.parameters(), lr=self.lr)
+            return optim.Adagrad(self.model.parameters(), lr=self.lr, lr_decay=self.lr_decay)
 
 
     def init_scheduler(self):
@@ -59,6 +59,8 @@ class SequenceModel(ABC):
             return optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=lr_lambda)
         elif self.scheduler_type == 'dev_perf':
             return optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=self.decay_rate, patience=self.patience, min_lr=self.lr_min)
+        elif self.scheduler_type == 'linear':
+            return optim.lr_scheduler
 
 
     def update_scheduler(self, train_step):
