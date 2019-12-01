@@ -172,10 +172,12 @@ def run_experiment(spec, experiment_directory):
             for train_step, batch in enumerate(train_iter):
                 num_steps +=1
                 progress.update()
-                loss = sequence_model.train_step(batch.text, batch.target, train_step=train_step, mems=mems)
+                loss = sequence_model.train_step(batch.text, batch.target, mems=mems)
                 losses.append(loss)
                 progress.set_description("Loss {:.4f}".format(loss))
 
+                # Update scheduler
+                sequence_model.update_scheduler(train_step)
 
 
                 if num_steps % 500 == 0:

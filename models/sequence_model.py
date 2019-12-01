@@ -94,12 +94,11 @@ class SequenceModel(ABC):
 
     
     @abstractmethod
-    def train_step(self, inputs, targets, train_step=0, mems=tuple()):
+    def train_step(self, inputs, targets, mems=tuple()):
         """
         Performs an unsupervised train step for a given batch.
         Returns loss on batch.
 
-        `train_step` is needed whenever the scheduler is non-constant
         `mems` is only used for TransformerXL
         """
         raise NotImplementedError()
