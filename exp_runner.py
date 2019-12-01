@@ -42,6 +42,10 @@ def evaluate_model(sequence_model, eval_iter, max_iterations, vocab):
     """
     Computes perplexity of a given model on an evaluation iterator.
     """
+    # Transformer has its own evaluation method
+    if isinstance(sequence_model, TransformerXL):
+        return sequence_model.evaluate(eval_iter, max_iterations)
+
     cross_entropy_loss = nn.CrossEntropyLoss()
     emb = nn.Embedding(vocab, vocab) 
     emb.weight.data = torch.eye(vocab)
