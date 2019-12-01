@@ -207,12 +207,14 @@ if __name__ == '__main__':
                 # Initialize the transition matrix.
                 transition_matrix = init_trans_matrix(dep, args.vocab_size, args.vocab_size)
 
+                print(args.train_len)
                 # Training.
                 for i in tqdm(range(int(np.ceil(args.train_len/args.words_line)))):
                     next_sequence = mc_generator_short_long(lag, args.words_line,
                                         prev_state_seq, transition_matrix)
                     line = ' '.join(map(str, next_sequence)) + '\n'
                     train_file.write(line)
+                    print("yah")
                     prev_state_seq = next_sequence
 
                 # Testing.
@@ -232,16 +234,18 @@ if __name__ == '__main__':
                 # Initialize the transition matrix.
                 transition_matrix = init_trans_matrix(dep, args.hidden_size, args.hidden_size)
                 emission_matrix = rand_init_prob_matrix(args.hidden_size, args.vocab_size, max_non_zero)
-                print(transition_matrix)
-                print(emission_matrix)
+                # print(transition_matrix)
+                # print(emission_matrix)
+
 
                 # Training.
                 for i in tqdm(range(int(np.ceil(args.train_len/args.words_line)))):
                     (next_hid_sequence, next_obs_sequence) = hmm_generator_short_long(lag, args.words_line,
                                         prev_hidden_state_seq, transition_matrix, emission_matrix)
                     line = ' '.join(map(str, next_obs_sequence)) + '\n'
-                    test_file.write(line)
+                    train_file.write(line)
                     prev_hidden_state_seq = next_hid_sequence
+                    
 
                 # Testing.
                 for i in tqdm(range(int(np.ceil(args.test_len/args.words_line)))):

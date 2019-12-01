@@ -171,6 +171,8 @@ def run_experiment(spec, experiment_directory):
         for epoch in itertools.count(start=1):
             model.train()
             mems = tuple()
+            print()
+
             for train_step, batch in enumerate(train_iter):
                 num_steps +=1
                 progress.update()

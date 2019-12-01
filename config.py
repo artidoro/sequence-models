@@ -5,7 +5,7 @@ from collections import OrderedDict
 EXPERIMENT_RUNNER_SHOULD_OVERWRITE = True
 CVISIBLE = 'CUDA_VISIBLE_DEVICES'
 
-DATA_GENERATION_VERSION = 2
+DATA_GENERATION_VERSION = 3
 
 
 
@@ -38,9 +38,9 @@ HYPERPARAMETERS = OrderedDict({
 DEFAULT_VALUES_SPEC = {
     'device': 'cuda',
     'lr': 0.002,
-    'max_step': 100000,
+    'max_step': 300000,
     'eval_steps': 10,  # This is similar to the epoch in terms of number of iterations.
-    'test_size': 10000, # Number of words in the test set.
+    'test_size': 9999, # Number of words in the test set.
     'eta_min': 0.0,
     'embedding_dim': 256,
     'hidden_dim': 256,
