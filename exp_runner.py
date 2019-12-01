@@ -127,6 +127,8 @@ def run_experiment(spec, experiment_directory):
         sequence_model = LSTMModel(**spec)
     elif algorithm == 'cnn':
         sequence_model = GatedCNN(**spec)
+    else:
+        print(spec)
 
     # TODO: loop over trainig files/algorithm specification
     ROOT_PATH = 'generated_data'

@@ -12,7 +12,9 @@ import time
 from os.path import exists as E
 from os.path import join as J
 
-from utils.non_daemonic_pool import NonDaemonPool
+import models
+import models.utils
+from models.utils.non_daemonic_pool import NonDaemonPool
 
 
 import config as c

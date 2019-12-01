@@ -38,7 +38,7 @@ HYPERPARAMETERS = OrderedDict({
 DEFAULT_VALUES_SPEC = {
     'device': 'cuda',
     'lr': 0.002,
-    'max_step': 300000,
+    'max_step': 10000,
     'eval_steps': 10,  # This is similar to the epoch in terms of number of iterations.
     'test_size': 9999, # Number of words in the test set.
     'eta_min': 0.0,
