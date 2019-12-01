@@ -128,7 +128,7 @@ def hmm_generator_short_long(lag_size, output_length,
 ###############
 # Increase this as we change the generation protocol and push every time to github so that we can
 # track the changes in how the data is generated.
-GEN_VERSION = 1
+GEN_VERSION = 3
 ###############
 
 dep = 2
