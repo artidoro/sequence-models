@@ -19,6 +19,7 @@ from models.gated_cnn import GatedCNN
 from models.lstm import LSTMModel
 from models.sequence_model import SequenceModel
 from models.transformerXL import TransformerXL
+from data_generation.data_utils import torchtext_batch_iterators
 from data_generation.data_utils import torchtext_batch_iterators_split
 from models.utils.tqdm_logger import TqdmLogger
 
@@ -129,18 +130,19 @@ def run_experiment(spec, experiment_directory):
 
     # TODO: loop over trainig files/algorithm specification
     ROOT_PATH = 'generated_data'
-    DATA_FILE = 'V{}hmm_hidden_{}_lag_{}_vocab_{}.txt'.format(
+    DATA_FILE = 'V{}_hmm_hidden_{}_lag_{}_vocab_{}.txt'.format(
         c.DATA_GENERATION_VERSION, hmm_hidden, sequence_dependence, vocab)
-
+    train_file = 'train_' + DATA_FILE
+    test_file = 'test_' + DATA_FILE
     device = torch.device(device)
 
     # Create dataset iterators
-    train_iter, test_iter = torchtext_batch_iterators_split(
-        ROOT_PATH, DATA_FILE, test_size=spec["test_size"],
+    train_iter, test_iter = torchtext_batch_iterators(
+        ROOT_PATH, train_file, test_file,
         batch_size=batch_size, bptt_len=bptt_len, device=device, batch_first=True, repeat=False)
 
-    train_perplex_iter,  test_perplex_iter = torchtext_batch_iterators_split(
-        ROOT_PATH, DATA_FILE, test_size=spec["test_size"],
+    train_perplex_iter, test_perplex_iter = torchtext_batch_iterators(
+        ROOT_PATH, train_file, test_file,
         batch_size=batch_size, bptt_len=bptt_len, device=device, batch_first=True, repeat=False)
 
     # Model

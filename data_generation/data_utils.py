@@ -91,6 +91,20 @@ def torchtext_batch_iterators(root_path, train_path, validation_path, test_path,
     train_iter, val_iter, test_iter = data.BPTTIterator.splits((train, validation, test),
         batch_size=batch_size, device=device, bptt_len=bptt_len, repeat=repeat)
 
-
-
     return train_iter, val_iter, test_iter
+
+def torchtext_batch_iterators(root_path, train_path, test_path,
+        batch_size=32, bptt_len=32, device=None, batch_first=True, repeat=False):
+
+    def tokenize(text):
+        return list(map(int, text.split(' ')))
+
+    text_field = data.Field(sequential=True, batch_first=batch_first, tokenize=tokenize, use_vocab=False)
+
+    train, test  = datasets.LanguageModelingDataset.splits(path=root_path, train=train_path,
+        test=test_path, text_field=text_field, newline_eos=False)
+
+    train_iter, test_iter = data.BPTTIterator.splits((train, test),
+        batch_size=batch_size, device=device, bptt_len=bptt_len, repeat=repeat)
+
+    return train_iter, test_iter
