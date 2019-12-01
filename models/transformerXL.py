@@ -215,6 +215,7 @@ class TransformerXL(SequenceModel):
         inputs, targets = inputs.t(), targets.t()
 
         # Calculate loss
+        self.para_model = self.model.to(self.device)
         ret = self.para_model(inputs, targets, *mems)
         loss, mems = ret[0], ret[1:]
         loss = loss.float().mean().type_as(loss)
@@ -232,6 +233,6 @@ class TransformerXL(SequenceModel):
 
         self.optimizer.step()
 
-        return loss
+        return loss.item()
 
 

@@ -83,6 +83,8 @@ def run_experiment(spec, experiment_directory):
     
     # Unpack some of the specification information
     try:
+        spec['max_step'] = 10000
+
         spec = set_spec_default_values(spec)
 
         algorithm = spec["algorithm"]
@@ -131,6 +133,7 @@ def run_experiment(spec, experiment_directory):
     ROOT_PATH = 'generated_data'
     DATA_FILE = 'V{}hmm_hidden_{}_lag_{}_vocab_{}.txt'.format(
         c.DATA_GENERATION_VERSION, hmm_hidden, sequence_dependence, vocab)
+    DATA_FILE = 'train_V0hmm_hidden_1_lag_2_vocab_3.txt'
 
     device = torch.device(device)
 
@@ -145,6 +148,9 @@ def run_experiment(spec, experiment_directory):
 
     # Model
     model = sequence_model.get_model()
+    for child in model.children():
+        print(type(child))
+        child.train()
     optimizer = sequence_model.get_optimizer()
     scheduler = sequence_model.get_scheduler()
 
