@@ -172,7 +172,7 @@ if __name__ == '__main__':
         help='the number of words per line. (default {})'.format(words_per_line_default))
     parser.add_argument('--dest_folder', default=dest_folder_default,
         help='the destination folder. (default {})'.format(dest_folder_default))
-    parser.add_argument('--max_nonzero_emission', default=max_non_zero,
+    parser.add_argument('--max_nonzero_emission', default=max_non_zero, type=int,
         help='the number of non-zero elements in each row of the emission matrix (default {})'.format(max_non_zero))
     parser.add_argument('--model_seed', default=model_seed,
         help='the seed used to initialize the model parameters. (default {})'.format(model_seed))
@@ -191,10 +191,10 @@ if __name__ == '__main__':
     # Each should have length file len.
     for idx, lag in enumerate([2**exp for exp in range(args.lag_min, args.lag_max + 1)]):
 
-        train_file_name = '{}/train_V{}_{}_lag_{}_vocab_{}.txt'.format(args.dest_folder, GEN_VERSION,
-            file_base, lag, args.vocab_size)
-        test_file_name = '{}/test_V{}_{}_lag_{}_vocab_{}.txt'.format(args.dest_folder, GEN_VERSION,
-            file_base, lag, args.vocab_size)
+        train_file_name = '{}/train_V{}_{}_lag_{}_vocab_{}_emission_{}.txt'.format(args.dest_folder, GEN_VERSION,
+            file_base, lag, args.vocab_size, args.max_nonzero_emission)
+        test_file_name = '{}/test_V{}_{}_lag_{}_vocab_{}_emission_{}.txt'.format(args.dest_folder, GEN_VERSION,
+            file_base, lag, args.vocab_size, args.max_nonzero_emission)
         os.makedirs(os.path.dirname(train_file_name), exist_ok=True)
         os.makedirs(os.path.dirname(test_file_name), exist_ok=True)
         with open(train_file_name, 'w') as train_file, open(test_file_name, 'w') as test_file:
@@ -233,10 +233,9 @@ if __name__ == '__main__':
 
                 # Initialize the transition matrix.
                 transition_matrix = init_trans_matrix(dep, args.hidden_size, args.hidden_size)
-                emission_matrix = rand_init_prob_matrix(args.hidden_size, args.vocab_size, max_non_zero)
+                emission_matrix = rand_init_prob_matrix(args.hidden_size, args.vocab_size, args.max_nonzero_emission)
                 # print(transition_matrix)
                 # print(emission_matrix)
-
 
                 # Training.
                 for i in tqdm(range(int(np.ceil(args.train_len/args.words_line)))):
@@ -245,7 +244,6 @@ if __name__ == '__main__':
                     line = ' '.join(map(str, next_obs_sequence)) + '\n'
                     train_file.write(line)
                     prev_hidden_state_seq = next_hid_sequence
-                    
 
                 # Testing.
                 for i in tqdm(range(int(np.ceil(args.test_len/args.words_line)))):
